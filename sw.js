@@ -78,15 +78,58 @@ define(['./workbox-b1bafff1'], (function (workbox) { 'use strict';
    */
   workbox.precacheAndRoute([{
     "url": "registerSW.js",
-    "revision": "3ca0b8505b4bec776b69afdba2768812"
+    "revision": "1872c500de691dce40960bb85481de07"
   }, {
     "url": "index.html",
-    "revision": "0.ppin3j7itco"
+    "revision": "e80f11e8a47a8dee98c4e308fc57378e"
+  }, {
+    "url": "icon.svg",
+    "revision": "7908722e4dade1205222601cf5eb07d5"
+  }, {
+    "url": "assets/index-BaNw_5xq.js",
+    "revision": null
+  }, {
+    "url": "assets/index-BHVAToNs.css",
+    "revision": null
+  }, {
+    "url": "assets/aistudio/image_df2a89fc.png",
+    "revision": null
+  }, {
+    "url": "assets/aistudio/image_c49a254e.png",
+    "revision": null
+  }, {
+    "url": "assets/aistudio/image_9477630e.png",
+    "revision": null
+  }, {
+    "url": "assets/aistudio/image_593f4397.png",
+    "revision": null
+  }, {
+    "url": "assets/aistudio/image_57d64b4f.png",
+    "revision": null
+  }, {
+    "url": "assets/aistudio/image_5713e0d5.png",
+    "revision": null
+  }, {
+    "url": "assets/aistudio/image_4147f7ea.png",
+    "revision": null
+  }, {
+    "url": "assets/aistudio/image_28e1f645.png",
+    "revision": null
+  }, {
+    "url": "assets/aistudio/image_1f22333c.png",
+    "revision": null
+  }, {
+    "url": "assets/aistudio/image_1192a259.png",
+    "revision": null
+  }, {
+    "url": "icon.svg",
+    "revision": "7908722e4dade1205222601cf5eb07d5"
+  }, {
+    "url": "manifest.webmanifest",
+    "revision": "1e4438254daf42d51ee8b83bc9d42d75"
   }], {});
   workbox.cleanupOutdatedCaches();
-  workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
-    allowlist: [/^\/$/]
-  }));
+  workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html")));
   workbox.registerRoute(/^https:\/\/fonts\.googleapis\.com\/.*/i, new workbox.CacheFirst({
     "cacheName": "google-fonts-cache",
     plugins: [new workbox.ExpirationPlugin({
