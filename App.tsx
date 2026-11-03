@@ -7,9 +7,12 @@ import {
   CheckCircle2,
   AlertCircle,
   Zap,
+  Sliders,
+  BookOpen,
 } from 'lucide-react';
 import { Navigation, NavTab } from './components/Navigation';
 import { TrendsHomeSection } from './components/TrendsHomeSection';
+import { EditorialIssueView } from './components/EditorialIssueView';
 import { PricingPlans } from './components/PricingPlans';
 import { DietPlansPage } from './components/DietPlansPage';
 import { CardioWorkoutsPage } from './components/CardioWorkoutsPage';
@@ -21,6 +24,7 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 
 import { PlanDetails, SubscriptionState, UserProgressData, LegalConsentRecord } from './types';
 import { PRICING_PLANS } from './data/pricingPlans';
+import { LIFESTYLE_ISSUES } from './data/lifestyleTrendsData';
 import { getStoredSubscription, saveStoredSubscription } from './services/stripeService';
 
 const DEFAULT_PROGRESS: UserProgressData = {
@@ -46,6 +50,10 @@ const DEFAULT_PROGRESS: UserProgressData = {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<NavTab>('trends');
+  const [fashionSubView, setFashionSubView] = useState<'trends' | 'studio'>('trends');
+  const [exerciseSubView, setExerciseSubView] = useState<'trends' | 'workout'>('trends');
+  const [foodSubView, setFoodSubView] = useState<'trends' | 'recipes'>('trends');
+
   const [selectedPlanForCheckout, setSelectedPlanForCheckout] = useState<PlanDetails | null>(null);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
 
@@ -115,7 +123,6 @@ export default function App() {
   const handleCheckoutSuccess = (newSub: SubscriptionState) => {
     setSubscription(newSub);
     saveStoredSubscription(newSub);
-    // Switch to dashboard upon plan unlock
     setActiveTab('dashboard');
   };
 
@@ -194,7 +201,7 @@ export default function App() {
 
       {/* Main App Content Viewport */}
       <main className="flex-1 pb-24 lg:pb-12">
-        {/* TAB 0: TRENDS 2026 HOME (Exact lifestylehub.netlify.app experience) */}
+        {/* TAB 0: TRENDS 2026 HOME */}
         {activeTab === 'trends' && (
           <TrendsHomeSection
             onNavigate={setActiveTab}
@@ -202,7 +209,145 @@ export default function App() {
           />
         )}
 
-        {/* TAB 1: DASHBOARD */}
+        {/* TAB 1: FASHION (ISSUE 01) */}
+        {activeTab === 'fashion' && (
+          <div>
+            {/* View Sub-Toggle */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 flex items-center justify-between">
+              <div className="inline-flex p-1 bg-[#F3EFEA] rounded-full border border-[#E8E2D8]">
+                <button
+                  onClick={() => setFashionSubView('trends')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    fashionSubView === 'trends'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Fashion Trends & Looks</span>
+                </button>
+                <button
+                  onClick={() => setFashionSubView('studio')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    fashionSubView === 'studio'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <Sliders className="w-3.5 h-3.5 text-[#EED989]" />
+                  <span>Body Silhouettes & Colors</span>
+                </button>
+              </div>
+            </div>
+
+            {fashionSubView === 'trends' ? (
+              <EditorialIssueView
+                issue={LIFESTYLE_ISSUES.fashion}
+                onOpenActionSuite={() => setFashionSubView('studio')}
+                actionSuiteTitle="Body Shapes & Color Combinations"
+                actionSuiteSubtitle="Match tailored cuts and 4 seasonal color palettes to your exact body silhouette to boost everyday confidence."
+              />
+            ) : (
+              <FashionConfidencePage />
+            )}
+          </div>
+        )}
+
+        {/* TAB 2: FOOD (ISSUE 02) */}
+        {activeTab === 'diets' && (
+          <div>
+            {/* View Sub-Toggle */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 flex items-center justify-between">
+              <div className="inline-flex p-1 bg-[#F3EFEA] rounded-full border border-[#E8E2D8]">
+                <button
+                  onClick={() => setFoodSubView('trends')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    foodSubView === 'trends'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Food Trends 2026</span>
+                </button>
+                <button
+                  onClick={() => setFoodSubView('recipes')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    foodSubView === 'recipes'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-[#EED989]" />
+                  <span>Healthy Cooking Recipes & Timer</span>
+                </button>
+              </div>
+            </div>
+
+            {foodSubView === 'trends' ? (
+              <EditorialIssueView
+                issue={LIFESTYLE_ISSUES.food}
+                onOpenActionSuite={() => setFoodSubView('recipes')}
+                actionSuiteTitle="Simple & Healthy Cooking Kitchen"
+                actionSuiteSubtitle="Step-by-step recipes, precision cooking timers, prebiotic fiber-maxxing tracks, and interactive grocery checklists."
+              />
+            ) : (
+              <DietPlansPage
+                onLogMeal={handleLogMeal}
+                completedRecipeIds={progress.completedRecipeIds}
+              />
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: FITNESS & EXERCISE (ISSUE 03) */}
+        {activeTab === 'cardio' && (
+          <div>
+            {/* View Sub-Toggle */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 flex items-center justify-between">
+              <div className="inline-flex p-1 bg-[#F3EFEA] rounded-full border border-[#E8E2D8]">
+                <button
+                  onClick={() => setExerciseSubView('trends')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    exerciseSubView === 'trends'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Fitness Trends 2026</span>
+                </button>
+                <button
+                  onClick={() => setExerciseSubView('workout')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    exerciseSubView === 'workout'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <Zap className="w-3.5 h-3.5 text-[#EED989]" />
+                  <span>Simple Cardio Fat-Burn Timers</span>
+                </button>
+              </div>
+            </div>
+
+            {exerciseSubView === 'trends' ? (
+              <EditorialIssueView
+                issue={LIFESTYLE_ISSUES.exercise}
+                onOpenActionSuite={() => setExerciseSubView('workout')}
+                actionSuiteTitle="Simple Cardio Weight Loss Protocols"
+                actionSuiteSubtitle="Zone 2 fat oxidation walks, living-room zero-jump circuits, interval countdown timers, and age-based BPM calculators."
+              />
+            ) : (
+              <CardioWorkoutsPage
+                onLogWorkout={handleLogWorkout}
+                completedWorkoutIds={progress.completedWorkoutIds}
+              />
+            )}
+          </div>
+        )}
+
+        {/* TAB 4: PERSONAL DASHBOARD */}
         {activeTab === 'dashboard' && (
           <PersonalizedDashboard
             progress={progress}
@@ -215,87 +360,6 @@ export default function App() {
           />
         )}
 
-        {/* TAB 2: HEALTH & DIETS */}
-        {activeTab === 'diets' && (
-          isUnlocked ? (
-            <DietPlansPage
-              onLogMeal={handleLogMeal}
-              completedRecipeIds={progress.completedRecipeIds}
-            />
-          ) : (
-            <div className="max-w-3xl mx-auto px-4 py-16 text-center space-y-5">
-              <div className="w-16 h-16 rounded-3xl bg-[#1F1C18] text-[#EED989] flex items-center justify-center mx-auto shadow-xl">
-                <Lock className="w-8 h-8" />
-              </div>
-              <h2 className="text-3xl font-display font-light">
-                Unlock Simple & Healthy Diets
-              </h2>
-              <p className="text-stone-600 text-sm max-w-md mx-auto">
-                Subscribe to Essentials or Plus to unlock 200+ step-by-step culinary recipes, fiber-maxxing tracks, and simple cooking hacks.
-              </p>
-              <button
-                onClick={() => setSelectedPlanForCheckout(PRICING_PLANS[1])}
-                className="px-6 py-3.5 rounded-full bg-[#1F1C18] text-[#FAF7F2] font-semibold text-sm shadow-md hover:bg-black transition cursor-pointer"
-              >
-                Start Plus ($19.99/mo)
-              </button>
-            </div>
-          )
-        )}
-
-        {/* TAB 3: SIMPLE CARDIO & WEIGHT LOSS */}
-        {activeTab === 'cardio' && (
-          isUnlocked ? (
-            <CardioWorkoutsPage
-              onLogWorkout={handleLogWorkout}
-              completedWorkoutIds={progress.completedWorkoutIds}
-            />
-          ) : (
-            <div className="max-w-3xl mx-auto px-4 py-16 text-center space-y-5">
-              <div className="w-16 h-16 rounded-3xl bg-[#1F1C18] text-[#EED989] flex items-center justify-center mx-auto shadow-xl">
-                <Lock className="w-8 h-8" />
-              </div>
-              <h2 className="text-3xl font-display font-light">
-                Unlock Simple Cardio Weight Loss
-              </h2>
-              <p className="text-stone-600 text-sm max-w-md mx-auto">
-                Subscribe to access our evidence-based Zone 2 fat-oxidation walks, living room zero-jump intervals, and active interval timers.
-              </p>
-              <button
-                onClick={() => setSelectedPlanForCheckout(PRICING_PLANS[1])}
-                className="px-6 py-3.5 rounded-full bg-[#1F1C18] text-[#FAF7F2] font-semibold text-sm shadow-md hover:bg-black transition cursor-pointer"
-              >
-                Start Plus ($19.99/mo)
-              </button>
-            </div>
-          )
-        )}
-
-        {/* TAB 4: FASHION & BODY CONFIDENCE */}
-        {activeTab === 'fashion' && (
-          isUnlocked ? (
-            <FashionConfidencePage />
-          ) : (
-            <div className="max-w-3xl mx-auto px-4 py-16 text-center space-y-5">
-              <div className="w-16 h-16 rounded-3xl bg-[#1F1C18] text-[#EED989] flex items-center justify-center mx-auto shadow-xl">
-                <Lock className="w-8 h-8" />
-              </div>
-              <h2 className="text-3xl font-display font-light">
-                Unlock Body Silhouettes & Color Harmonies
-              </h2>
-              <p className="text-stone-600 text-sm max-w-md mx-auto">
-                Explore custom color combinations for 5 body shapes and seasonal undertone palettes to supercharge personal confidence.
-              </p>
-              <button
-                onClick={() => setSelectedPlanForCheckout(PRICING_PLANS[1])}
-                className="px-6 py-3.5 rounded-full bg-[#1F1C18] text-[#FAF7F2] font-semibold text-sm shadow-md hover:bg-black transition cursor-pointer"
-              >
-                Start Plus ($19.99/mo)
-              </button>
-            </div>
-          )
-        )}
-
         {/* TAB 5: PLANS & PRICING */}
         {activeTab === 'plans' && (
           <PricingPlans
@@ -305,7 +369,7 @@ export default function App() {
           />
         )}
 
-        {/* TAB 6: LEGAL SHIELD IN-PAGE */}
+        {/* TAB 6: LEGAL SHIELD */}
         {activeTab === 'legal' && (
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
             <div className="p-8 rounded-3xl bg-white border border-[#E8E2D8] shadow-sm space-y-6">
@@ -351,7 +415,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Editorial Footer - Clean customer experience */}
+      {/* Editorial Footer */}
       <footer className="border-t border-[#E8E2D8] bg-[#FAF7F2] py-8 px-4 sm:px-6 text-xs text-stone-500">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
