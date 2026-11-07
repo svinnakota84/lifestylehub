@@ -1,13 +1,20 @@
+import { accessToken } from './identity';
 import type { SubscriptionState } from '../types';
 export interface AccountUser { id: string; name: string; email: string }
 export interface AccountState { user: AccountUser; subscription: SubscriptionState | null }
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
+let apiBase='/api';let publicKey='';
+export function configureApi(base?:string,key?:string){apiBase=base||'/api';publicKey=key||'';}
 export async function api<T>(path: string, body?: unknown): Promise<T> {
-  const response = await fetch(`/api/${path}`, {
-    method: body === undefined ? 'GET' : 'POST', credentials: 'same-origin', cache: 'no-store',
-    headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
+  const headers:Record<string,string>={};
+  if(body!==undefined)headers['Content-Type']='application/json';
+  if(publicKey)headers.apikey=publicKey;
+  if(path!=='config'){const token=await accessToken();if(token)headers.Authorization=`Bearer ${token}`;}
+  const response = await fetch(`${apiBase}/${path}`, {
+    method: body === undefined ? 'GET' : 'POST', credentials: apiBase.startsWith('/')?'same-origin':'omit', cache: 'no-store',
+    headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   let data: any;

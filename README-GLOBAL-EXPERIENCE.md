@@ -37,18 +37,10 @@ USD base prices; no made-up conversions are used. All non-USD equivalents are
 marked approximate and display the rate date. They are not guaranteed Stripe
 quotes, and can differ from Checkout because of provider rates, fees and taxes.
 
-Hosted Checkout explicitly enables Stripe Adaptive Pricing and automatic locale.
-Stripe presents actual supported local-currency billing and eligible methods.
-Unsupported currencies/markets use USD. The site does not promise every country,
-currency or payment method is supported. No tax registrations or paid financial
-services are silently enabled.
-
-Sources:
-- https://docs.stripe.com/payments/currencies/localize-prices/adaptive-pricing
-- https://github.com/fawazahmed0/exchange-api
-- Photography: Unsplash images originally referenced by URL in the implementation,
-  downloaded under `public/images` for dependable delivery. Hero source:
-  https://images.unsplash.com/photo-1545389336-cf090694435e
+Hosted Checkout now explicitly disables Adaptive Pricing to honour the requested
+USD-only billing policy. Local currency amounts on the website are estimates for
+reference. The customer's bank/card issuer handles any card-currency conversion
+and fees. Stripe confirms the USD charge before payment.
 
 ## Hosting activation
 

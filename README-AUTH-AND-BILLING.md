@@ -1,3 +1,8 @@
+> Current GitHub-hosted option: see [README-GITHUB-BACKEND.md](README-GITHUB-BACKEND.md).
+> Netlify is optional. Supabase Auth/Edge Functions can supply the secure backend
+> while the public website stays on GitHub Pages. The provider is selected by
+> public/runtime-config.json after provisioning. USD-only billing is now configured.
+
 # Verified accounts and billing
 
 ## Release status

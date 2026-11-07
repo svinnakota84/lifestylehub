@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { login, signup, requestPasswordRecovery, updateUser, acceptInvite } from '@netlify/identity';
+import { login, signup, requestPasswordRecovery, updateUser, acceptInvite } from '../services/identity';
 import { X } from 'lucide-react';
 export type AuthMode = 'login' | 'signup' | 'forgot' | 'reset' | 'invite';
 interface Props { initialMode: AuthMode; inviteToken?: string; onClose: () => void; onSuccess: () => Promise<void> }

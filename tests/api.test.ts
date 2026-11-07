@@ -126,11 +126,11 @@ test('new customers are saved under the verified identity id', async () => {
   assert.equal(calls.find(([type]) => type === 'customer')[1].metadata.identity_user_id, user.id);
   assert.equal(calls.find(([type]) => type === 'checkout')[1].customer, 'cus_new');
 });
-test('hosted checkout enables local-currency Adaptive Pricing and automatic locale', async () => {
+test('hosted checkout keeps USD billing and automatic locale', async () => {
   const { request, calls } = fixture();
   await request('checkout', { tier: 'plus', agreedToLegal: true });
   const parameters = calls.find(([kind]) => kind === 'checkout')[1];
-  assert.deepEqual(parameters.adaptive_pricing, { enabled: true });
+  assert.deepEqual(parameters.adaptive_pricing, { enabled: false });
   assert.equal(parameters.locale, 'auto');
 });
 test('Complete programs are denied to Plus and granted only to Complete', async () => {

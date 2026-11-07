@@ -28,7 +28,8 @@
     "noEmit": true
   },
   "exclude": [
-    "dist"
+    "dist",
+    "supabase/functions"
   ],
   "include": [
     "App.tsx",

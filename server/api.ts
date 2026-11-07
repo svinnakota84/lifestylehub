@@ -151,7 +151,7 @@ export function createApi(deps: ApiDependencies) {
       }
       const price = await ensurePrice(stripe, tier);
       const consentAt = new Date().toISOString();
-      const session = await stripe.checkout.sessions.create({ mode: 'subscription', adaptive_pricing: { enabled: true }, locale: 'auto', customer: billingCustomer!, client_reference_id: user.id, line_items: [{ price, quantity: 1 }], subscription_data: { billing_mode: { type: 'flexible' }, metadata: { app: 'lifestylehub', identity_user_id: user.id } }, metadata: { app: 'lifestylehub', tier, identity_user_id: user.id, terms_version: '2026-11-07', terms_accepted_at: consentAt }, success_url: `${deps.origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${deps.origin}/?checkout=canceled` });
+      const session = await stripe.checkout.sessions.create({ mode: 'subscription', adaptive_pricing: { enabled: false }, locale: 'auto', customer: billingCustomer!, client_reference_id: user.id, line_items: [{ price, quantity: 1 }], subscription_data: { billing_mode: { type: 'flexible' }, metadata: { app: 'lifestylehub', identity_user_id: user.id } }, metadata: { app: 'lifestylehub', tier, identity_user_id: user.id, terms_version: '2026-11-07', terms_accepted_at: consentAt }, success_url: `${deps.origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${deps.origin}/?checkout=canceled` });
       if (!session.url) throw new HttpError(503, 'Checkout is temporarily unavailable.');
       return json({ url: session.url });
     } catch (error) {
