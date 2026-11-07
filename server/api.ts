@@ -4,13 +4,14 @@ import type { User } from '@netlify/identity';
 import { HEALTHY_RECIPES } from '../data/recipesData';
 import { CARDIO_ROUTINES } from '../data/cardioData';
 import { BODY_SHAPE_STYLING, COLOR_SEASONS } from '../data/fashionData';
+import { MEMBER_PROGRAMS } from '../data/memberGuides';
 import type { SubscriptionState } from '../types';
 
 // Amounts and product identities are controlled exclusively by the server.
 export const PLANS = {
   essentials: { name: 'Essentials', amount: 999 },
   plus: { name: 'Plus', amount: 1999 },
-  coach: { name: 'Coach', amount: 3499 },
+  coach: { name: 'Complete', amount: 3499 },
 } as const;
 type Tier = keyof typeof PLANS;
 const productId = (tier: Tier) => `lifestylehub_${tier}_v1`;
@@ -107,6 +108,10 @@ export function createApi(deps: ApiDependencies) {
         if (!['plus', 'coach'].includes(sub.tier)) throw new HttpError(403, 'This feature requires Plus or Coach membership.');
         if (kind === 'workouts') return json({ routines: CARDIO_ROUTINES });
         if (kind === 'styling') return json({ styling: BODY_SHAPE_STYLING, palettes: COLOR_SEASONS });
+        if (kind === 'programs') {
+          if (sub.tier !== 'coach') throw new HttpError(403, 'Four-week programs require Complete membership.');
+          return json({ programs: MEMBER_PROGRAMS });
+        }
         throw new HttpError(400, 'Unknown member feature.');
       }
       if (path === 'portal') {
@@ -145,7 +150,7 @@ export function createApi(deps: ApiDependencies) {
       }
       const price = await ensurePrice(stripe, tier);
       const consentAt = new Date().toISOString();
-      const session = await stripe.checkout.sessions.create({ mode: 'subscription', customer: billingCustomer!, client_reference_id: user.id, line_items: [{ price, quantity: 1 }], subscription_data: { billing_mode: { type: 'flexible' }, metadata: { app: 'lifestylehub', identity_user_id: user.id } }, metadata: { app: 'lifestylehub', tier, identity_user_id: user.id, terms_version: '2026-11-07', terms_accepted_at: consentAt }, success_url: `${deps.origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${deps.origin}/?checkout=canceled` });
+      const session = await stripe.checkout.sessions.create({ mode: 'subscription', adaptive_pricing: { enabled: true }, locale: 'auto', customer: billingCustomer!, client_reference_id: user.id, line_items: [{ price, quantity: 1 }], subscription_data: { billing_mode: { type: 'flexible' }, metadata: { app: 'lifestylehub', identity_user_id: user.id } }, metadata: { app: 'lifestylehub', tier, identity_user_id: user.id, terms_version: '2026-11-07', terms_accepted_at: consentAt }, success_url: `${deps.origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${deps.origin}/?checkout=canceled` });
       if (!session.url) throw new HttpError(503, 'Checkout is temporarily unavailable.');
       return json({ url: session.url });
     } catch (error) {

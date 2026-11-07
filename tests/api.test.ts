@@ -126,3 +126,18 @@ test('new customers are saved under the verified identity id', async () => {
   assert.equal(calls.find(([type]) => type === 'customer')[1].metadata.identity_user_id, user.id);
   assert.equal(calls.find(([type]) => type === 'checkout')[1].customer, 'cus_new');
 });
+test('hosted checkout enables local-currency Adaptive Pricing and automatic locale', async () => {
+  const { request, calls } = fixture();
+  await request('checkout', { tier: 'plus', agreedToLegal: true });
+  const parameters = calls.find(([kind]) => kind === 'checkout')[1];
+  assert.deepEqual(parameters.adaptive_pricing, { enabled: true });
+  assert.equal(parameters.locale, 'auto');
+});
+test('Complete programs are denied to Plus and granted only to Complete', async () => {
+  const plus = fixture({ subscription: validSubscription() });
+  assert.equal((await plus.request('content?kind=programs')).status, 403);
+  const complete = validSubscription(); complete.items.data[0].price.product = 'lifestylehub_coach_v1'; complete.items.data[0].price.unit_amount = 3499;
+  const response = await fixture({ subscription: complete }).request('content?kind=programs');
+  assert.equal(response.status, 200);
+  const data=await response.json();assert.equal(data.programs.length,3);assert.ok(data.programs.every((program:any)=>program.weeks.length===4));
+});

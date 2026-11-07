@@ -3,11 +3,11 @@
 ## Release status
 
 The custom domain `lifestyle.radiantsparkllc.com` currently runs on GitHub Pages.
-The main branch's public Pages workflow repairs the original missing-asset blank page.
+The main branch's public Pages workflow builds and publishes the global public experience.
 GitHub Pages cannot execute the account/payment API implemented in this change.
-The secure membership changes must be deployed to the connected Netlify project,
+The secure membership APIs must be deployed to the connected Netlify project,
 with its Identity service and server secret configured, before switching the public domain.
-Do not replace the functioning public Pages deployment with an unconfigured build.
+The public UI detects unavailable server services and keeps paid checkout disabled.
 
 ## Runtime setup
 
@@ -26,7 +26,7 @@ Validate on its Netlify URL before moving the custom domain from GitHub Pages.
 
 No manual product or price creation is required. The server provisions stable,
 idempotent LifestyleHub products and monthly USD prices on first checkout:
-Essentials $9.99, Plus $19.99, Coach $34.99. Existing catalog entries are checked
+Essentials $9.99, Plus $19.99, Complete $34.99. Existing catalog entries are checked
 against these amounts. A dedicated customer portal configuration is created when
 needed, including cancellation at period end, payment method changes and invoices.
 Existing merchant portal defaults are not modified.
@@ -53,7 +53,7 @@ Existing merchant portal defaults are not modified.
   This intentionally uses on-demand verification instead of a webhook-fed cache:
   cancellation/failed renewals cannot leave stale database entitlements behind.
 - Recipe payloads require a paid plan. Workout and styling payloads require Plus
-  or Coach. These payloads are not bundled into the frontend. Editorial pages are
+  or Complete. These payloads are not bundled into the frontend. Editorial pages are
   public. The source repository itself remains public as before.
 - Private API responses use `Cache-Control: private, no-store`. PWA navigation
   fallback excludes API/Identity paths; private JSON is not cached for offline use.
@@ -74,8 +74,8 @@ Existing merchant portal defaults are not modified.
 | `/api/checkout-status` | POST | Verify the returning account's Checkout Session |
 | `/api/portal` | POST | Open customer-scoped billing management |
 | `/api/content?kind=recipes` | GET | Paid recipe data |
-| `/api/content?kind=workouts` | GET | Plus/Coach workout data |
-| `/api/content?kind=styling` | GET | Plus/Coach styling data |
+| `/api/content?kind=workouts` | GET | Plus/Complete workout data |
+| `/api/content?kind=styling` | GET | Plus/Complete styling data |
 
 ## Validation
 
