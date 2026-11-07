@@ -6,7 +6,7 @@ export function browserCurrency(language: string) {
   try { return currencyForCountry(new Intl.Locale(language).region); } catch { return 'USD'; }
 }
 export function formatAmount(amount: number, currency: string, locale: string) {
-  return new Intl.NumberFormat(locale, { style: 'currency', currency, currencyDisplay: 'narrowSymbol', maximumFractionDigits: ['JPY','KRW','VND','CLP'].includes(currency) ? 0 : 2 }).format(amount);
+  return new Intl.NumberFormat(locale, { style: 'currency', currency, currencyDisplay: 'narrowSymbol' }).format(amount);
 }
 export function localEquivalent(usd: number, currency: string, rates: Record<string, number>): number | null {
   if (currency === 'USD') return usd;

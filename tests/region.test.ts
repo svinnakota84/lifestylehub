@@ -10,3 +10,5 @@ test('currency conversions are numeric estimates and unavailable rates do not in
 test('zero-decimal currency display rounds correctly',()=>{
   assert.equal(formatAmount(1234.56,'JPY','en-US'),'¥1,235');assert.ok(formatAmount(900,'INR','en-IN').includes('900.00'));
 });
+
+test('three-decimal currencies retain their standard precision',()=>{assert.ok(formatAmount(1.234,'BHD','en-US').includes('1.234'));});
