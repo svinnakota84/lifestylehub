@@ -13,10 +13,9 @@ import {
   Smile,
   ShieldCheck,
 } from 'lucide-react';
-import { BODY_SHAPE_STYLING, COLOR_SEASONS } from '../data/fashionData';
-import { BodyShape, Undertone, ColorSeasonPalette } from '../types';
+import { BodyShape, Undertone, ColorSeasonPalette, BodyShapeStyling } from '../types';
 
-export const FashionConfidencePage: React.FC = () => {
+export const FashionConfidencePage: React.FC<{ styling: BodyShapeStyling[]; palettes: ColorSeasonPalette[] }> = ({ styling: BODY_SHAPE_STYLING, palettes: COLOR_SEASONS }) => {
   const [selectedShape, setSelectedShape] = useState<BodyShape>('hourglass');
   const [selectedUndertone, setSelectedUndertone] = useState<Undertone>('warm');
   const [copiedHex, setCopiedHex] = useState<string | null>(null);

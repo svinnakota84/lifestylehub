@@ -16,15 +16,16 @@ import {
   X,
   AlertCircle,
 } from 'lucide-react';
-import { HEALTHY_RECIPES } from '../data/recipesData';
 import { Recipe } from '../types';
 
 interface DietPlansPageProps {
+  recipes: Recipe[];
   onLogMeal: (recipeId: string) => void;
   completedRecipeIds: string[];
 }
 
 export const DietPlansPage: React.FC<DietPlansPageProps> = ({
+  recipes: HEALTHY_RECIPES,
   onLogMeal,
   completedRecipeIds,
 }) => {

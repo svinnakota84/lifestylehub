@@ -4,7 +4,10 @@
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
     "module": "ESNext",
-    "types": ["vite/client", "vite-plugin-pwa/client"],
+    "types": [
+      "vite/client",
+      "vite-plugin-pwa/client"
+    ],
     "lib": [
       "ES2022",
       "DOM",
@@ -24,5 +27,20 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "exclude": ["dist"]
+  "exclude": [
+    "dist"
+  ],
+  "include": [
+    "App.tsx",
+    "main.tsx",
+    "components/**/*.tsx",
+    "hooks/**/*.ts",
+    "services/**/*.ts",
+    "data/**/*.ts",
+    "types/**/*.ts",
+    "server/**/*.ts",
+    "netlify/**/*.ts",
+    "tests/**/*.ts",
+    "vite.config.ts"
+  ]
 }

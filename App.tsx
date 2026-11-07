@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Sparkles,
   Lock,
@@ -25,7 +25,11 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 import { PlanDetails, SubscriptionState, UserProgressData, LegalConsentRecord } from './types';
 import { PRICING_PLANS } from './data/pricingPlans';
 import { LIFESTYLE_ISSUES } from './data/lifestyleTrendsData';
-import { getStoredSubscription, saveStoredSubscription } from './services/stripeService';
+import { api, getAccount, openBillingPortal, ApiError, type AccountUser } from './services/stripeService';
+import { getUser, logout, handleAuthCallback } from '@netlify/identity';
+import { AuthModal, type AuthMode } from './components/AuthModal';
+import { MemberContent } from './components/MemberContent';
+import type { Recipe, CardioRoutine, BodyShapeStyling, ColorSeasonPalette } from './types';
 
 const DEFAULT_PROGRESS: UserProgressData = {
   currentWeight: 154.2,
@@ -57,78 +61,89 @@ export default function App() {
   const [selectedPlanForCheckout, setSelectedPlanForCheckout] = useState<PlanDetails | null>(null);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
 
-  // Subscription state from storage
-  const [subscription, setSubscription] = useState<SubscriptionState | null>(() => {
-    const saved = getStoredSubscription();
-    if (saved) return saved;
-    // Default active Plus subscription so all pages are unlocked and verifiable out of the box
-    return {
-      isActive: true,
-      tier: 'plus',
-      subscribedAt: new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      }),
-      customerName: 'Sarah Jenkins',
-      customerEmail: 'sarah.jenkins@example.com',
-      paymentMethod: 'Visa •••• 4242 (Stripe Verified)',
-      invoiceId: 'INV-STR-8942-PL',
-      autoRenew: true,
-    };
-  });
-
-  // User progress data from storage
-  const [progress, setProgress] = useState<UserProgressData>(() => {
+  const [subscription, setSubscription] = useState<SubscriptionState | null>(null);
+  const [user, setUser] = useState<AccountUser | null>(null);
+  const [authMode, setAuthMode] = useState<AuthMode | null>(null);
+  const [inviteToken, setInviteToken] = useState<string>();
+  const [accountError, setAccountError] = useState('');
+  const [checkingAccount, setCheckingAccount] = useState(true);
+  const [progress, setProgress] = useState<UserProgressData>(DEFAULT_PROGRESS);
+  const [consentRecord] = useState<LegalConsentRecord | null>(null);
+  const mounted = useRef(true);
+  const accountRequest = useRef(0);
+  const refreshAccount = useCallback(async () => {
+    const version = ++accountRequest.current;
     try {
-      const saved = localStorage.getItem('lifestylehub_progress_v1');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.warn('Failed to parse progress from storage:', e);
-    }
-    return DEFAULT_PROGRESS;
-  });
-
-  // Legal Consent record
-  const [consentRecord, setConsentRecord] = useState<LegalConsentRecord | null>(() => {
-    try {
-      const saved = localStorage.getItem('lifestylehub_legal_consent');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.warn('Failed to read consent:', e);
-    }
-    return {
-      hasConsented: true,
-      termsAcceptedDate: 'Nov 2, 2026',
-      signatureName: 'Sarah Jenkins',
-      parqClearanceConfirmed: true,
-      ipMock: 'SEC-8942',
-    };
-  });
-
-  // Save progress changes
+      const identity = await getUser();
+      if (!mounted.current || version !== accountRequest.current) return;
+      if (!identity) { setUser(null); setSubscription(null); return; }
+      const account = await getAccount();
+      if (!mounted.current || version !== accountRequest.current) return;
+      setUser(account.user); setSubscription(account.subscription); setAccountError('');
+    } catch (err) {
+      if (!mounted.current || version !== accountRequest.current) return;
+      setSubscription(null);
+      if (err instanceof ApiError && err.status === 401) setUser(null);
+      setAccountError(err instanceof Error ? err.message : 'Account verification failed.');
+    } finally { if (mounted.current && version === accountRequest.current) setCheckingAccount(false); }
+  }, []);
   useEffect(() => {
+    mounted.current = true;
+    // Legacy demo records never grant access and are removed on migration.
+    try { ['lifestylehub_subscription_state_v1', 'lifestylehub_stripe_settings_v1', 'lifestylehub_legal_consent', 'lifestylehub_progress_v1'].forEach(key => localStorage.removeItem(key)); } catch { /* Browser storage may be disabled. */ }
+    (async () => {
+      try {
+        const result = await handleAuthCallback();
+        if (result?.type === 'recovery') setAuthMode('reset');
+        if (result?.type === 'invite' && result.token) { setInviteToken(result.token); setAuthMode('invite'); }
+        await refreshAccount();
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('checkout') === 'success' && params.get('session_id')) {
+          const outcome = await api<{ pending?: boolean; subscription: SubscriptionState | null }>('checkout-status', { sessionId: params.get('session_id') });
+          if (outcome.pending) setAccountError('Payment is still being confirmed. Use Refresh account shortly.');
+          else { setSubscription(outcome.subscription); setActiveTab('dashboard'); }
+        } else if (params.get('checkout') === 'canceled') { setActiveTab('plans'); setAccountError('Checkout canceled. No membership was activated.'); }
+        if (params.has('checkout') || params.has('billing')) window.history.replaceState({}, '', window.location.pathname);
+      } catch (err) { setAccountError(err instanceof Error ? err.message : 'Account verification failed.'); setCheckingAccount(false); }
+    })();
+    const check = () => { void refreshAccount(); };
+    const timer = window.setInterval(check, 60000);
+    window.addEventListener('focus', check);
+    window.addEventListener('offline', check);
+    return () => { mounted.current = false; window.clearInterval(timer); window.removeEventListener('focus', check); window.removeEventListener('offline', check); };
+  }, [refreshAccount]);
+  useEffect(() => {
+    setProgress(DEFAULT_PROGRESS);
+    if (!user) return;
     try {
-      localStorage.setItem('lifestylehub_progress_v1', JSON.stringify(progress));
-    } catch (e) {
-      console.error('Failed to save progress:', e);
-    }
-  }, [progress]);
-
-  // Handlers
+      const saved = localStorage.getItem(`lifestylehub_progress_${user.id}`);
+      if (saved) setProgress(JSON.parse(saved));
+    } catch { /* Invalid progress never affects account or billing state. */ }
+  }, [user?.id]);
+  const updateProgress = (updater: (previous: UserProgressData) => UserProgressData) => {
+    setProgress(previous => {
+      const next = updater(previous);
+      if (user) { try { localStorage.setItem(`lifestylehub_progress_${user.id}`, JSON.stringify(next)); } catch { /* Storage may be disabled. */ } }
+      return next;
+    });
+  };
   const handleSelectPlan = (plan: PlanDetails) => {
+    if (!user) { setAuthMode('signup'); return; }
+    if (subscription?.isActive) { void manageBilling(); return; }
     setSelectedPlanForCheckout(plan);
   };
-
-  const handleCheckoutSuccess = (newSub: SubscriptionState) => {
-    setSubscription(newSub);
-    saveStoredSubscription(newSub);
-    setActiveTab('dashboard');
-  };
-
+  async function manageBilling() {
+    setAccountError('');
+    try { await openBillingPortal(); } catch (err) { setAccountError(err instanceof Error ? err.message : 'Billing could not be opened.'); }
+  }
+  async function signOut() {
+    ++accountRequest.current;
+    setSubscription(null); setUser(null); setSelectedPlanForCheckout(null); setActiveTab('trends'); setProgress(DEFAULT_PROGRESS);
+    try { await logout(); } catch { setAccountError('Sign-out could not reach the server. Close this browser on shared devices.'); }
+  }
   const handleUpdateWeight = (newWeight: number) => {
     const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    setProgress((prev) => ({
+    updateProgress((prev) => ({
       ...prev,
       currentWeight: newWeight,
       weightHistory: [...prev.weightHistory, { date: todayLabel, weight: newWeight }],
@@ -136,7 +151,7 @@ export default function App() {
   };
 
   const handleToggleWater = (glassIndex: number) => {
-    setProgress((prev) => {
+    updateProgress((prev) => {
       const current = prev.waterGlasses;
       const next = glassIndex < current ? glassIndex : glassIndex + 1;
       return { ...prev, waterGlasses: next };
@@ -144,11 +159,11 @@ export default function App() {
   };
 
   const handleUpdateConfidence = (score: number) => {
-    setProgress((prev) => ({ ...prev, confidenceScore: score }));
+    updateProgress((prev) => ({ ...prev, confidenceScore: score }));
   };
 
   const handleLogWorkout = (routineId: string, minutes: number, calories: number) => {
-    setProgress((prev) => ({
+    updateProgress((prev) => ({
       ...prev,
       cardioMinutesToday: prev.cardioMinutesToday + minutes,
       caloriesBurnedToday: prev.caloriesBurnedToday + calories,
@@ -160,7 +175,7 @@ export default function App() {
   };
 
   const handleLogMeal = (recipeId: string) => {
-    setProgress((prev) => ({
+    updateProgress((prev) => ({
       ...prev,
       completedRecipeIds: prev.completedRecipeIds.includes(recipeId)
         ? prev.completedRecipeIds
@@ -169,26 +184,6 @@ export default function App() {
     }));
     setActiveTab('dashboard');
   };
-
-  const handleDownloadZip = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetch('/lifestylehub-final.zip');
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/zip' }));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'lifestylehub-final.zip';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch {
-      window.location.href = '/lifestylehub-final.zip';
-    }
-  };
-
-  const isUnlocked = subscription?.isActive === true;
 
   return (
     <div className="min-h-screen bg-[#FAF7F2] text-[#1F1C18] flex flex-col justify-between selection:bg-[#EED989] selection:text-[#1F1C18]">
@@ -199,6 +194,10 @@ export default function App() {
         subscription={subscription}
       />
 
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-3 flex flex-wrap items-center justify-end gap-4 text-sm border-b border-stone-200">
+        {checkingAccount ? <span role="status">Checking account…</span> : user ? <><span>{user.email}</span><button className="underline" onClick={() => void refreshAccount()}>Refresh account</button>{subscription && <button className="underline" onClick={() => void manageBilling()}>Manage billing</button>}<button className="underline" onClick={() => void signOut()}>Sign out</button></> : <button className="underline font-semibold" onClick={() => setAuthMode('login')}>Sign in / Create account</button>}
+      </div>
+      {accountError && <div role="alert" className="max-w-7xl mx-auto px-6 py-3 text-sm text-amber-900">{accountError}</div>}
       {/* Main App Content Viewport */}
       <main className="flex-1 pb-24 lg:pb-12">
         {/* TAB 0: TRENDS 2026 HOME */}
@@ -248,7 +247,7 @@ export default function App() {
                 actionSuiteSubtitle="Match tailored cuts and 4 seasonal color palettes to your exact body silhouette to boost everyday confidence."
               />
             ) : (
-              <FashionConfidencePage />
+              <MemberContent<{ styling: BodyShapeStyling[]; palettes: ColorSeasonPalette[] }> key={`${user?.id}-${subscription?.tier}-styling`} kind="styling" onOpenPlans={() => setActiveTab('plans')}>{data => <FashionConfidencePage styling={data.styling} palettes={data.palettes} />}</MemberContent>
             )}
           </div>
         )}
@@ -292,10 +291,7 @@ export default function App() {
                 actionSuiteSubtitle="Step-by-step recipes, precision cooking timers, prebiotic fiber-maxxing tracks, and interactive grocery checklists."
               />
             ) : (
-              <DietPlansPage
-                onLogMeal={handleLogMeal}
-                completedRecipeIds={progress.completedRecipeIds}
-              />
+              <MemberContent<{ recipes: Recipe[] }> key={`${user?.id}-${subscription?.tier}-recipes`} kind="recipes" onOpenPlans={() => setActiveTab('plans')}>{data => <DietPlansPage recipes={data.recipes} onLogMeal={handleLogMeal} completedRecipeIds={progress.completedRecipeIds} />}</MemberContent>
             )}
           </div>
         )}
@@ -339,25 +335,22 @@ export default function App() {
                 actionSuiteSubtitle="Zone 2 fat oxidation walks, living-room zero-jump circuits, interval countdown timers, and age-based BPM calculators."
               />
             ) : (
-              <CardioWorkoutsPage
-                onLogWorkout={handleLogWorkout}
-                completedWorkoutIds={progress.completedWorkoutIds}
-              />
+              <MemberContent<{ routines: CardioRoutine[] }> key={`${user?.id}-${subscription?.tier}-workouts`} kind="workouts" onOpenPlans={() => setActiveTab('plans')}>{data => <CardioWorkoutsPage routines={data.routines} onLogWorkout={handleLogWorkout} completedWorkoutIds={progress.completedWorkoutIds} />}</MemberContent>
             )}
           </div>
         )}
 
         {/* TAB 4: PERSONAL DASHBOARD */}
-        {activeTab === 'dashboard' && (
+        {activeTab === 'dashboard' && (user ?
           <PersonalizedDashboard
             progress={progress}
             subscription={subscription}
             onUpdateWeight={handleUpdateWeight}
             onToggleWater={handleToggleWater}
             onUpdateConfidence={handleUpdateConfidence}
-            onOpenPlans={() => setActiveTab('plans')}
+            onOpenPlans={() => subscription?.isActive ? void manageBilling() : setActiveTab('plans')}
             onOpenLegalShield={() => setIsLegalModalOpen(true)}
-          />
+          /> : <div className="p-12 text-center"><p className="mb-4">Sign in to open your personal dashboard.</p><button className="underline" onClick={() => setAuthMode('login')}>Sign in</button></div>
         )}
 
         {/* TAB 5: PLANS & PRICING */}
@@ -423,7 +416,7 @@ export default function App() {
             <span>•</span>
             <span>Fashion, Food & Fitness Trends 2026</span>
             <span>•</span>
-            <span className="text-emerald-700 font-medium">Offline PWA Synced</span>
+            <span className="text-stone-500">Membership verified online</span>
           </div>
 
           <div className="flex items-center gap-4">
@@ -445,23 +438,17 @@ export default function App() {
             >
               Medical Disclaimer & Terms
             </button>
-            <button
-              onClick={handleDownloadZip}
-              className="hover:text-stone-900 underline underline-offset-2 text-stone-500 font-medium transition cursor-pointer"
-              title="Download verified Windows-compatible project bundle (.ZIP)"
-            >
-              Owner: Download Project .ZIP
-            </button>
+
           </div>
         </div>
       </footer>
 
       {/* Global Modals & Indicators */}
-      <StripeCheckoutModal
+      {authMode && <AuthModal key={authMode} initialMode={authMode} inviteToken={inviteToken} onClose={() => setAuthMode(null)} onSuccess={refreshAccount} />}
+      <StripeCheckoutModal key={selectedPlanForCheckout?.id || 'closed'}
         plan={selectedPlanForCheckout}
         isOpen={!!selectedPlanForCheckout}
         onClose={() => setSelectedPlanForCheckout(null)}
-        onSuccess={handleCheckoutSuccess}
         onOpenLegalShield={() => setIsLegalModalOpen(true)}
       />
 

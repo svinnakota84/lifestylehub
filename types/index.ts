@@ -20,6 +20,7 @@ export interface SubscriptionState {
   paymentMethod: string;
   invoiceId: string;
   autoRenew: boolean;
+  currentPeriodEnd?: string;
 }
 
 export interface Recipe {

@@ -14,15 +14,16 @@ import {
   ChevronRight,
   Calculator,
 } from 'lucide-react';
-import { CARDIO_ROUTINES } from '../data/cardioData';
 import { CardioRoutine } from '../types';
 
 interface CardioWorkoutsPageProps {
+  routines: CardioRoutine[];
   onLogWorkout: (routineId: string, minutes: number, calories: number) => void;
   completedWorkoutIds: string[];
 }
 
 export const CardioWorkoutsPage: React.FC<CardioWorkoutsPageProps> = ({
+  routines: CARDIO_ROUTINES,
   onLogWorkout,
   completedWorkoutIds,
 }) => {
