@@ -1048,7 +1048,6 @@ function createApi(deps) {
       }
       const user = await deps.getUser();
       if (!user?.id || !user.email || !user.confirmedAt) throw new HttpError(401, "Sign in with a confirmed email address to continue.");
-      const stripe2 = deps.getStripe();
       const customer = await customerFor(user);
       const sub = await membership(user, customer);
       if (path === "me") return json({ user: { id: user.id, name: user.name || "", email: user.email }, subscription: sub });
@@ -1068,6 +1067,7 @@ function createApi(deps) {
         }
         throw new HttpError(400, "Unknown member feature.");
       }
+      const stripe2 = deps.getStripe();
       if (path === "portal") {
         if (!customer) throw new HttpError(409, "You do not have a billing account yet.");
         const configs = await stripe2.billingPortal.configurations.list({ active: true, limit: 100 });
@@ -1125,8 +1125,8 @@ function createSupabaseHandler(deps) {
     if (origin2 !== deps.origin) return json2({ error: "Origin not permitted." }, 403);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
     const path = new URL(request.url).pathname.split("/membership/")[1] || "";
-    if (path === "config" && request.method === "GET") return json2({ membershipReady: deps.ready, billingCurrency: "USD" });
-    if (!deps.ready) return json2({ error: "Secure account and billing services are not connected yet." }, 503);
+    if (path === "config" && request.method === "GET") return json2({ authReady: true, membershipReady: deps.ready, billingCurrency: "USD" });
+    if (!deps.ready && path !== "me") return json2({ error: "Secure billing services are not connected yet." }, 503);
     try {
       const token = request.headers.get("authorization")?.match(/^Bearer ([^\s]+)$/)?.[1];
       if (!token) return json2({ error: "Sign in to continue." }, 401);

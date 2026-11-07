@@ -7,7 +7,7 @@ let stripe: Stripe | undefined;
 export default async (request: Request, context: { geo?: { country?: { code?: string } } }) => {
   if (/\/(?:api|\.netlify\/functions\/api)\/config$/.test(new URL(request.url).pathname)) {
     if (request.method !== 'GET') return new Response(null, { status: 405, headers: { Allow: 'GET' } });
-    return Response.json({ membershipReady: Boolean(process.env.STRIPE_SECRET_KEY && getIdentityConfig()), country: context.geo?.country?.code || null }, { headers: { 'Cache-Control': 'private, no-store' } });
+    return Response.json({ authReady: Boolean(getIdentityConfig()), membershipReady: Boolean(process.env.STRIPE_SECRET_KEY && getIdentityConfig()), country: context.geo?.country?.code || null }, { headers: { 'Cache-Control': 'private, no-store' } });
   }
   const origin = process.env.URL;
   if (!origin) return Response.json({ error: 'Hosting is not configured.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });

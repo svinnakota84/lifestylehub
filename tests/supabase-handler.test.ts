@@ -8,7 +8,7 @@ function fixture(options:{user?:any;ready?:boolean;allowed?:boolean}={}){
   const request=(path:string,headers:Record<string,string>={},method='GET')=>handler(new Request(url+path,{method,headers:{origin,...headers}}));
   return{request,token:()=>verifiedToken};
 }
-test('Supabase config is public but contains no secrets',async()=>{const response=await fixture({ready:false}).request('config');assert.equal(response.status,200);assert.deepEqual(await response.json(),{membershipReady:false,billingCurrency:'USD'});});
+test('Supabase config is public but contains no secrets',async()=>{const response=await fixture({ready:false}).request('config');assert.equal(response.status,200);assert.deepEqual(await response.json(),{authReady:true,membershipReady:false,billingCurrency:'USD'});});
 test('cross-origin requests are rejected',async()=>{assert.equal((await fixture().request('config',{origin:'https://other.example'})).status,403);});
 test('CORS preflight permits only the configured website',async()=>{const response=await fixture().request('me',{},'OPTIONS');assert.equal(response.status,204);assert.equal(response.headers.get('Access-Control-Allow-Origin'),origin);});
 test('missing or unconfirmed sessions are denied before accessing billing records',async()=>{assert.equal((await fixture().request('me')).status,401);assert.equal((await fixture({user:null}).request('me',{Authorization:'Bearer arbitrary'})).status,401);assert.equal((await fixture({user:{id:'user_1'}}).request('me',{Authorization:'Bearer arbitrary'})).status,401);});

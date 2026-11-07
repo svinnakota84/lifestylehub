@@ -10,8 +10,8 @@ export function createSupabaseHandler(deps:Dependencies){
     if(origin!==deps.origin)return json({error:'Origin not permitted.'},403);
     if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
     const path=new URL(request.url).pathname.split('/membership/')[1]||'';
-    if(path==='config'&&request.method==='GET')return json({membershipReady:deps.ready,billingCurrency:'USD'});
-    if(!deps.ready)return json({error:'Secure account and billing services are not connected yet.'},503);
+    if(path==='config'&&request.method==='GET')return json({authReady:true,membershipReady:deps.ready,billingCurrency:'USD'});
+    if(!deps.ready&&path!=='me')return json({error:'Secure billing services are not connected yet.'},503);
     try{
       const token=request.headers.get('authorization')?.match(/^Bearer ([^\s]+)$/)?.[1];
       if(!token)return json({error:'Sign in to continue.'},401);

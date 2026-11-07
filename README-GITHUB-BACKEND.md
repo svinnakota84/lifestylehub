@@ -16,6 +16,9 @@ The public `runtime-config.json` selects the provider and endpoint. It contains 
 the Supabase project URL and publishable key, which are intended for browser use.
 Neither Stripe secrets nor Supabase service-role keys belong in that file or Git.
 An unconfigured provider keeps checkout unavailable rather than pretending to work.
+Auth and billing readiness are separate: once Supabase is provisioned, verified
+users without a billing customer can create/sign into accounts even before the
+Stripe secret is supplied; paid checkout remains unavailable until billing is ready.
 
 ## Authentication
 

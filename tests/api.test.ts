@@ -161,3 +161,8 @@ test('Plus unlocks all Classic editions and the expanded collections',async()=>{
   const fitness=await (await request('content?kind=classic-exercise')).json();
   assert.equal(fitness.issue.items.length,8);assert.equal(fitness.routines.length,10);
 });
+test('a verified account with no billing customer can sign in before Stripe credentials are configured',async()=>{
+  const handler=createApi({origin,getUser:async()=>user,getStore:()=>({get:async()=>null})as any,getStripe:()=>{throw new Error('Stripe not configured');}});
+  const response=await handler(new Request(origin+'/api/me'));
+  assert.equal(response.status,200);assert.equal((await response.json()).subscription,null);
+});

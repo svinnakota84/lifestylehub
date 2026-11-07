@@ -95,7 +95,6 @@ export function createApi(deps: ApiDependencies) {
       }
       const user = await deps.getUser();
       if (!user?.id || !user.email || !user.confirmedAt) throw new HttpError(401, 'Sign in with a confirmed email address to continue.');
-      const stripe = deps.getStripe();
       const customer = await customerFor(user);
       const sub = await membership(user, customer);
       if (path === 'me') return json({ user: { id: user.id, name: user.name || '', email: user.email }, subscription: sub });
@@ -115,6 +114,7 @@ export function createApi(deps: ApiDependencies) {
         }
         throw new HttpError(400, 'Unknown member feature.');
       }
+      const stripe = deps.getStripe();
       if (path === 'portal') {
         if (!customer) throw new HttpError(409, 'You do not have a billing account yet.');
         // Reuse a dedicated configuration; never alter the merchant's default portal.

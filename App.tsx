@@ -37,7 +37,7 @@ export default function App() {
   const [currency,setCurrency]=useState(readSavedCurrency); const [rates,setRates]=useState<Record<string,number>>({}); const [rateDate,setRateDate]=useState('');
   const [regionOpen,setRegionOpen]=useState(false);const [regionSearch,setRegionSearch]=useState('');const [mobileMenu,setMobileMenu]=useState(false);
   const [article,setArticle]=useState<JournalArticle|null>(null);const [legalOpen,setLegalOpen]=useState(false);const [notice,setNotice]=useState('');
-  const [membershipReady,setMembershipReady]=useState(false);const [account,setAccount]=useState<AccountState|null>(null);const [authMode,setAuthMode]=useState<AuthMode|null>(null);const [inviteToken,setInviteToken]=useState<string>();
+  const [authReady,setAuthReady]=useState(false);const [membershipReady,setMembershipReady]=useState(false);const [account,setAccount]=useState<AccountState|null>(null);const [authMode,setAuthMode]=useState<AuthMode|null>(null);const [inviteToken,setInviteToken]=useState<string>();
   const [selectedPlan,setSelectedPlan]=useState<PlanDetails|null>(null);const [libraryTab,setLibraryTab]=useState('classic');const [libraryOpen,setLibraryOpen]=useState(false);
   const [activity,setActivity]=useState<string[]>([]); const [openFAQ,setOpenFAQ]=useState<number|null>(0); const [savedPrograms,setSavedPrograms]=useState<string[]>([]);
   const locale=navigator.language||'en-US'; const subscription=account?.subscription; const active=subscription?.isActive===true;
@@ -53,10 +53,10 @@ export default function App() {
     (async()=>{
       try{
         const runtime=await loadRuntimeConfig();configureApi(runtime.apiBaseUrl,runtime.supabasePublishableKey);
-        const config=await api<{membershipReady:boolean;country?:string}>('config');
-        readyRef.current=config.membershipReady;setMembershipReady(config.membershipReady);
+        const config=await api<{authReady?:boolean;membershipReady:boolean;country?:string}>('config');
+        readyRef.current=config.authReady??config.membershipReady;setAuthReady(readyRef.current);setMembershipReady(config.membershipReady);
         try { if(!localStorage.getItem('lh_currency')&&config.country)setCurrency(currencyForCountry(config.country)); } catch { /* Browser preference remains available. */ }
-        if(!config.membershipReady)return;
+        if(!readyRef.current)return;
         const callback=await handleAuthCallback();
         if(callback?.type==='recovery')setAuthMode('reset');
         if(callback?.type==='invite'&&callback.token){setInviteToken(callback.token);setAuthMode('invite');}
@@ -69,7 +69,7 @@ export default function App() {
         }
         if(params.get('checkout')==='canceled')setNotice('Checkout canceled. No membership was activated.');
         if(params.has('checkout')||params.has('billing'))window.history.replaceState({},'',window.location.pathname);
-      }catch{readyRef.current=false;setMembershipReady(false);}
+      }catch{if(!readyRef.current)setAuthReady(false);setMembershipReady(false);}
     })();
     const check=()=>{void refreshAccount();};const timer=window.setInterval(check,60000);window.addEventListener('focus',check);
     return()=>{clearInterval(timer);window.removeEventListener('focus',check);};
@@ -91,7 +91,7 @@ export default function App() {
   },[regionOpen,article,notice,authMode,selectedPlan,legalOpen]);
   function selectCurrency(code:string){setCurrency(code);try{localStorage.setItem('lh_currency',code);}catch{}setRegionOpen(false);}
   function price(usd:number){const value=localEquivalent(usd,currency,rates);return value===null?formatAmount(usd,'USD',locale):formatAmount(value,currency,locale);}
-  function openAccount(){if(!membershipReady){setNotice('Membership sign-in and checkout are not available on this deployment yet. You can explore the free guides and sample tools now. Paid access will open after secure account and billing services are connected.');return;}if(account){setLibraryOpen(true);document.getElementById('member-library')?.scrollIntoView({behavior:'smooth'});}else setAuthMode('login');}
+  function openAccount(){if(!authReady){setNotice('Membership sign-in and checkout are not available on this deployment yet. You can explore the free guides and sample tools now. Paid access will open after secure account and billing services are connected.');return;}if(account){setLibraryOpen(true);document.getElementById('member-library')?.scrollIntoView({behavior:'smooth'});}else setAuthMode('login');}
   function choosePlan(plan:PlanDetails){if(!membershipReady){setNotice(`${plan.name} includes ${plan.features.join(', ')}. Membership checkout is not available yet, so no payment will be taken. Explore the free collection while we complete secure billing setup.`);return;}if(!account){setAuthMode('signup');return;}if(active){void manageBilling();return;}setSelectedPlan(plan);}
   async function manageBilling(){try{await openBillingPortal();}catch(err){setNotice(err instanceof Error?err.message:'Billing could not be opened.');}}
   async function signOut(){++requestVersion.current;setAccount(null);setLibraryOpen(false);setActivity([]);try{await logout();}catch{setNotice('Sign-out could not reach the account service. Close this browser on shared devices.');}}
