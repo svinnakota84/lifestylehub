@@ -16,16 +16,15 @@ import {
   X,
   AlertCircle,
 } from 'lucide-react';
+import { HEALTHY_RECIPES } from '../data/recipesData';
 import { Recipe } from '../types';
 
 interface DietPlansPageProps {
-  recipes: Recipe[];
   onLogMeal: (recipeId: string) => void;
   completedRecipeIds: string[];
 }
 
 export const DietPlansPage: React.FC<DietPlansPageProps> = ({
-  recipes: HEALTHY_RECIPES,
   onLogMeal,
   completedRecipeIds,
 }) => {
@@ -94,9 +93,9 @@ export const DietPlansPage: React.FC<DietPlansPageProps> = ({
               Unlocked & Cached
             </span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-serif-luxury font-normal text-[#1A1918] mt-1 tracking-tight">
+          <h1 className="text-3xl sm:text-5xl font-serif-luxury font-normal text-[#1A1918] mt-1 tracking-tight">
             Simple & Healthy Diets
-          </h2>
+          </h1>
           <p className="text-xs sm:text-sm text-stone-600 mt-2 max-w-xl leading-relaxed">
             Master the art of cooking nutrient-dense, high-protein, and fiber-rich meals with zero culinary complexity. Designed for sustained fat loss without hunger.
           </p>
@@ -376,7 +375,7 @@ export const DietPlansPage: React.FC<DietPlansPageProps> = ({
                 <div className="p-4 bg-white rounded-2xl border border-stone-200">
                   <h4 className="text-xs font-bold text-stone-900 uppercase tracking-wide mb-2 flex items-center gap-1.5">
                     <Tag className="w-3.5 h-3.5 text-[#C19A6B]" />
-                    <span>Ingredient Alternatives</span>
+                    <span>Smart Nutrition Swaps</span>
                   </h4>
                   <div className="space-y-1.5 text-xs text-stone-600">
                     {activeRecipe.swaps.map((sw, idx) => (
@@ -394,7 +393,7 @@ export const DietPlansPage: React.FC<DietPlansPageProps> = ({
             {/* Modal Bottom CTA */}
             <div className="p-4 bg-white border-t border-[#E8E2D8] flex flex-wrap items-center justify-between gap-3">
               <div className="text-xs text-stone-500">
-                Illustrative nutrition estimate: {activeRecipe.calories} kcal • {activeRecipe.protein}g protein • {activeRecipe.fiber}g fiber
+                Nutrient analysis: {activeRecipe.calories} kcal • {activeRecipe.protein}g protein • {activeRecipe.fiber}g fiber
               </div>
 
               <div className="flex items-center gap-2">

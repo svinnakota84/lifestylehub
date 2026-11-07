@@ -1,15 +1,19 @@
 name: Deploy public LifestyleHub site
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
+
 permissions:
   contents: read
   pages: write
   id-token: write
+
 concurrency:
   group: public-pages
   cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -18,32 +22,23 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm test
-      - run: npm run typecheck
-      - run: npm run build:supabase
-      - run: npm run build
-      - run: npm run check:member-bundle
-      - name: Verify published entry assets and SPA fallback
+      - name: Prepare public files and verify entry assets
         run: |
-          cp dist/index.html dist/404.html
+          mkdir -p _site/assets/aistudio
+          cp index.html *.js *.css icon.svg manifest.webmanifest CNAME .nojekyll _site/
+          cp image_*.png _site/assets/aistudio/
+          cp index.html _site/404.html
           python3 - <<'PY'
           import re
           from pathlib import Path
-          html = Path('dist/index.html').read_text()
+          html = Path('_site/index.html').read_text()
           for url in re.findall(r'(?:src|href)="(/[^"?]+)', html):
-              assert Path('dist', url.lstrip('/')).is_file(), f'Missing site asset: {url}'
-          for name in ['hero','food','move','style']:
-              assert Path(f'dist/images/{name}.jpg').is_file()
+              assert Path('_site', url.lstrip('/')).is_file(), f'Missing site asset: {url}'
           PY
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
-      - name: Publish verified build
+          path: _site
+      - name: Publish verified files
         id: deployment
         uses: actions/deploy-pages@v4

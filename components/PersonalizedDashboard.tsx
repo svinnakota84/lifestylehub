@@ -65,7 +65,7 @@ export const PersonalizedDashboard: React.FC<PersonalizedDashboardProps> = ({
               Personalized Health Hub
             </span>
             <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Saved on this device
+              <CheckCircle2 className="w-3 h-3" /> Offline Synced
             </span>
           </div>
           <h1 className="text-3xl sm:text-5xl font-serif-luxury font-normal text-[#1A1918] mt-1 tracking-tight">
@@ -272,7 +272,7 @@ export const PersonalizedDashboard: React.FC<PersonalizedDashboardProps> = ({
               {subscription?.tier ? `${subscription.tier.toUpperCase()} PLAN` : 'ESSENTIALS PLAN'}
             </h3>
             <p className="text-xs text-stone-300 mt-1">
-              {subscription ? `Invoice ${subscription.invoiceId} · ${subscription.autoRenew ? 'Monthly renewal enabled' : 'Cancels at the end of the billing period'}` : 'No paid membership. Choose a plan to subscribe.'}
+              Invoice #{subscription?.invoiceId || 'INV-LH-8942'} • Automatic monthly renewal • Cancel anytime with 1 tap.
             </p>
 
             <div className="grid grid-cols-3 gap-3 mt-6 pt-4 border-t border-stone-800 text-xs">

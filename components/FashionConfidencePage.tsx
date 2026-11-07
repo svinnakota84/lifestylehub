@@ -13,12 +13,12 @@ import {
   Smile,
   ShieldCheck,
 } from 'lucide-react';
-import { BodyShape, Undertone, ColorSeasonPalette, BodyShapeStyling } from '../types';
+import { BODY_SHAPE_STYLING, COLOR_SEASONS } from '../data/fashionData';
+import { BodyShape, Undertone, ColorSeasonPalette } from '../types';
 
-export const FashionConfidencePage: React.FC<{ styling: BodyShapeStyling[]; palettes: ColorSeasonPalette[] }> = ({ styling: BODY_SHAPE_STYLING, palettes: COLOR_SEASONS }) => {
+export const FashionConfidencePage: React.FC = () => {
   const [selectedShape, setSelectedShape] = useState<BodyShape>('hourglass');
   const [selectedUndertone, setSelectedUndertone] = useState<Undertone>('warm');
-  const [selectedPalette, setSelectedPalette] = useState('');
   const [copiedHex, setCopiedHex] = useState<string | null>(null);
 
   // Find active styling data
@@ -28,7 +28,7 @@ export const FashionConfidencePage: React.FC<{ styling: BodyShapeStyling[]; pale
   const matchedPalettes = COLOR_SEASONS.filter(
     (c) => c.undertone === selectedUndertone || selectedUndertone === 'neutral'
   );
-  const activePalette: ColorSeasonPalette = matchedPalettes.find(palette => palette.season === selectedPalette) || matchedPalettes[0] || COLOR_SEASONS[0];
+  const activePalette: ColorSeasonPalette = matchedPalettes[0] || COLOR_SEASONS[0];
 
   const handleCopyHex = (hex: string) => {
     navigator.clipboard?.writeText(hex);
@@ -49,18 +49,18 @@ export const FashionConfidencePage: React.FC<{ styling: BodyShapeStyling[]; pale
               Unlocked & Offline Ready
             </span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-serif-luxury font-normal text-[#1A1918] mt-1 tracking-tight">
+          <h1 className="text-3xl sm:text-5xl font-serif-luxury font-normal text-[#1A1918] mt-1 tracking-tight">
             Body Silhouettes & Color Harmonies
-          </h2>
+          </h1>
           <p className="text-xs sm:text-sm text-stone-600 mt-2 max-w-2xl leading-relaxed">
-            Explore colour combinations and outfit proportions as creative possibilities. Your comfort, culture and preferences guide what you choose to wear.
+            True style is not about changing your body—it is about dressing your unique architecture with scientific color palettes and tailored proportions to magnify unshakeable confidence.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-stone-700 bg-white border border-stone-200 px-3.5 py-2 rounded-full flex items-center gap-1.5 shadow-2xs">
             <Smile className="w-4 h-4 text-[#C19A6B]" />
-            <span>Style on Your Terms</span>
+            <span>Body Positivity Guaranteed</span>
           </span>
         </div>
       </div>
@@ -105,32 +105,26 @@ export const FashionConfidencePage: React.FC<{ styling: BodyShapeStyling[]; pale
       {/* Skin Undertone Selector Bar */}
       <div className="mt-8">
         <label className="text-xs font-bold uppercase tracking-wider text-stone-400 block mb-3">
-          Step 2: Explore a Colour Direction & Palette
+          Step 2: Choose Your Skin Undertone & Color Palette
         </label>
         <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
           {(['warm', 'cool', 'neutral'] as Undertone[]).map((tone) => (
             <button
               key={tone}
-              onClick={() => { setSelectedUndertone(tone); setSelectedPalette(''); }}
+              onClick={() => setSelectedUndertone(tone)}
               className={`px-5 py-2.5 rounded-full text-xs font-bold capitalize transition-all ${
                 selectedUndertone === tone
                   ? 'bg-[#1A1918] text-[#FAF7F2] shadow-sm'
                   : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
               }`}
             >
-              {tone === 'warm' && '☀️ Warm colours'}
-              {tone === 'cool' && '❄️ Cool colours'}
-              {tone === 'neutral' && '⚖️ Explore all colours'}
+              {tone === 'warm' && '☀️ Warm (Golden / Honey / Peachy)'}
+              {tone === 'cool' && '❄️ Cool (Rosy / Blue / Deep Espresso)'}
+              {tone === 'neutral' && '⚖️ Neutral (Balanced undertones)'}
             </button>
           ))}
         </div>
       </div>
-
-      <label className="block mt-4 text-xs font-semibold text-stone-700">Choose a palette
-        <select aria-label="Choose a colour palette" value={activePalette.season} onChange={event => setSelectedPalette(event.target.value)} className="block mt-2 w-full sm:max-w-sm rounded-xl border border-stone-300 bg-white p-3 text-xs">
-          {matchedPalettes.map(palette => <option key={palette.season} value={palette.season}>{palette.season}</option>)}
-        </select>
-      </label>
 
       {/* Main Two-Column Showcase */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
@@ -140,7 +134,7 @@ export const FashionConfidencePage: React.FC<{ styling: BodyShapeStyling[]; pale
             <div className="flex items-start justify-between pb-4 border-b border-stone-100">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-[#C19A6B]">
-                  Selected Colour Palette
+                  Your Color Season
                 </span>
                 <h3 className="font-serif-luxury font-bold text-2xl text-stone-900 mt-0.5">
                   {activePalette.season}
@@ -155,7 +149,7 @@ export const FashionConfidencePage: React.FC<{ styling: BodyShapeStyling[]; pale
             </p>
 
             <div className="mt-4 p-3 bg-[#FAF7F2] rounded-xl text-xs text-stone-700 flex items-center justify-between">
-              <span className="text-stone-500">Accessory Ideas:</span>
+              <span className="text-stone-500">Best Jewelry Metals:</span>
               <strong className="text-stone-900">{activePalette.bestJewelry}</strong>
             </div>
 
@@ -206,7 +200,7 @@ export const FashionConfidencePage: React.FC<{ styling: BodyShapeStyling[]; pale
             <div className="flex items-center gap-2">
               <Compass className="w-4 h-4 text-[#E6D59A]" />
               <h4 className="font-serif-luxury font-bold text-base text-[#FAF7F2]">
-                Colour Placement Ideas for {currentStyling.label}
+                Color Placement Rule for {currentStyling.label}
               </h4>
             </div>
             <p className="text-xs text-stone-300 leading-relaxed">

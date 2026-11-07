@@ -1,4 +1,0 @@
-# The handler performs its own authoritative getUser validation.
-# Disabling the legacy gateway JWT check permits the public config/OPTIONS paths.
-[functions.membership]
-verify_jwt = false

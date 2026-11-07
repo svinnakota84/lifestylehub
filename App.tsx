@@ -1,126 +1,477 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { ArrowUpRight, ArrowRight, Leaf, Globe2, X, Check, LockKeyhole, Plus, Minus, Menu, MoveUpRight, Play, Pause, RotateCcw } from 'lucide-react';
-import { getUser, logout, handleAuthCallback, loadRuntimeConfig } from './services/identity';
-import { api, configureApi, getAccount, openBillingPortal, type AccountState } from './services/stripeService';
-import { getExchangeRates, browserCurrency, currencyForCountry, formatAmount, localEquivalent } from './services/region';
-import { AuthModal, type AuthMode } from './components/AuthModal';
-import { StripeCheckoutModal } from './components/StripeCheckoutModal';
-import { MemberContent } from './components/MemberContent';
+import React, { useState, useEffect } from 'react';
+import {
+  Sparkles,
+  Lock,
+  ArrowRight,
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
+  Zap,
+  Sliders,
+  BookOpen,
+} from 'lucide-react';
+import { Navigation, NavTab } from './components/Navigation';
+import { TrendsHomeSection } from './components/TrendsHomeSection';
+import { EditorialIssueView } from './components/EditorialIssueView';
+import { PricingPlans } from './components/PricingPlans';
 import { DietPlansPage } from './components/DietPlansPage';
 import { CardioWorkoutsPage } from './components/CardioWorkoutsPage';
 import { FashionConfidencePage } from './components/FashionConfidencePage';
-import { ClassicMemberExperience } from './components/ClassicMemberExperience';
-import { MemberFoodCollection, MemberStyleCollection } from './components/MemberCollections';
+import { PersonalizedDashboard } from './components/PersonalizedDashboard';
+import { StripeCheckoutModal } from './components/StripeCheckoutModal';
 import { LegalShieldModal } from './components/LegalShieldModal';
-import { FREE_ARTICLES, type JournalArticle } from './data/freeContent';
-import type { PlanDetails, Recipe, CardioRoutine, BodyShapeStyling, ColorSeasonPalette } from './types';
+import { OfflineIndicator } from './components/OfflineIndicator';
 
-const PLANS: PlanDetails[] = [
-  {id:'essentials',name:'Essentials',price:9.99,period:'/month',tagline:'Bring a little intention to your everyday.',features:['15 recipes & 5 meal collections','Step-by-step cooking & recipe timers','Seven-day meal planner','Grocery list & Classic food edition'],buttonText:'Choose Essentials'},
-  {id:'plus',name:'Plus',price:19.99,period:'/month',tagline:'Your food, movement and style. Together.',popular:true,features:['Everything in Essentials','10 workouts & interval timers','8 colour palettes & 8 outfit ideas','Classic fashion & fitness editions'],buttonText:'Choose Plus'},
-  {id:'coach',name:'Complete',price:34.99,period:'/month',tagline:'More structure. Still entirely your own pace.',features:['Everything in Plus','Three guided four-week programs','Weekly reflection & progress checklist','Download your weekly plan as CSV'],buttonText:'Choose Complete'}
-];
-const FAQS = [
-  ['What can I explore for free?','Start with three editorial guides, a simple bowl recipe and a five-minute movement timer. No account or payment card is needed. Paid memberships add full collections and practical planning tools.'],
-  ['What changes when I become a member?','Essentials unlocks fifteen recipes, five meal collections, planning tools and the Classic food edition. Plus adds ten workouts, eight palettes, eight outfit ideas and the Classic fashion and fitness editions. Complete includes the Plus tools, three self-guided four-week programs and weekly-plan export. Access is linked to your verified account and paid subscription.'],
-  ['Can I pay in my local currency?','All subscriptions are billed in USD. The currency selector shows an approximate local equivalent for reference. If your card uses a different currency, your bank or card issuer handles conversion and may charge fees. Stripe shows the USD total before you confirm payment.'],
-  ['How does the monthly subscription work?','A paid plan renews monthly until canceled. You can manage payment details and cancel future renewals through your account’s billing portal. Canceling at the end of the billing period keeps access until that period ends.'],
-  ['Is this personal medical advice or one-to-one coaching?','No. LifestyleHub provides general educational content and self-guided planning tools. Complete is a digital program, not access to a nutritionist or medical professional. Consult a qualified professional for individual health, diet or exercise advice.']
-];
-function readSavedCurrency() { try { return localStorage.getItem('lh_currency') || browserCurrency(navigator.language); } catch { return browserCurrency(navigator.language); } }
-function StarterTimer() {
-  const [seconds,setSeconds]=useState(300); const [running,setRunning]=useState(false);
-  useEffect(()=>{if(!running||seconds===0)return;const id=window.setTimeout(()=>setSeconds(v=>v-1),1000);return()=>clearTimeout(id);},[running,seconds]);
-  return <div className="starter-timer"><div><span className="eyebrow">A FREE LITTLE RESET</span><h3>Five minutes. Just for you.</h3><p>Walk or stretch at a comfortable pace. Stop if you feel discomfort.</p></div><div className="timer-display" role="timer" aria-label={`${Math.floor(seconds/60)} minutes ${seconds%60} seconds`}>{Math.floor(seconds/60)}:{String(seconds%60).padStart(2,'0')}</div><button className="icon-button" aria-label={running?'Pause timer':'Start timer'} onClick={()=>setRunning(v=>!v)}>{running?<Pause/>:<Play/>}</button><button className="icon-button" aria-label="Reset timer" onClick={()=>{setSeconds(300);setRunning(false);}}><RotateCcw/></button></div>;
-}
+import { PlanDetails, SubscriptionState, UserProgressData, LegalConsentRecord } from './types';
+import { PRICING_PLANS } from './data/pricingPlans';
+import { LIFESTYLE_ISSUES } from './data/lifestyleTrendsData';
+import { getStoredSubscription, saveStoredSubscription } from './services/stripeService';
+
+const DEFAULT_PROGRESS: UserProgressData = {
+  currentWeight: 154.2,
+  targetWeight: 140.0,
+  startWeight: 162.0,
+  weightHistory: [
+    { date: 'Oct 12', weight: 162.0 },
+    { date: 'Oct 19', weight: 159.5 },
+    { date: 'Oct 26', weight: 156.8 },
+    { date: 'Nov 02', weight: 154.2 },
+  ],
+  waterGlasses: 5,
+  waterDate: new Date().toDateString(),
+  cardioMinutesToday: 25,
+  caloriesBurnedToday: 185,
+  completedWorkoutIds: ['zone2-fat-burn-walk'],
+  completedRecipeIds: ['lemon-herb-crispy-salmon'],
+  streakDays: 6,
+  confidenceScore: 9,
+  dailyAffirmation: 'Consistency in simple habits builds unshakeable energy and confidence.',
+};
+
 export default function App() {
-  const [currency,setCurrency]=useState(readSavedCurrency); const [rates,setRates]=useState<Record<string,number>>({}); const [rateDate,setRateDate]=useState('');
-  const [regionOpen,setRegionOpen]=useState(false);const [regionSearch,setRegionSearch]=useState('');const [mobileMenu,setMobileMenu]=useState(false);
-  const [article,setArticle]=useState<JournalArticle|null>(null);const [legalOpen,setLegalOpen]=useState(false);const [notice,setNotice]=useState('');
-  const [authReady,setAuthReady]=useState(false);const [membershipReady,setMembershipReady]=useState(false);const [account,setAccount]=useState<AccountState|null>(null);const [authMode,setAuthMode]=useState<AuthMode|null>(null);const [inviteToken,setInviteToken]=useState<string>();
-  const [selectedPlan,setSelectedPlan]=useState<PlanDetails|null>(null);const [libraryTab,setLibraryTab]=useState('classic');const [libraryOpen,setLibraryOpen]=useState(false);
-  const [activity,setActivity]=useState<string[]>([]); const [openFAQ,setOpenFAQ]=useState<number|null>(0); const [savedPrograms,setSavedPrograms]=useState<string[]>([]);
-  const locale=navigator.language||'en-US'; const subscription=account?.subscription; const active=subscription?.isActive===true;
-  const currencyNames=new Intl.DisplayNames([locale],{type:'currency'}); const currencies=Intl.supportedValuesOf('currency').filter(c=>!['ANG','CUC','HRK','SLL','SVC','XDR','XSU','ZWL'].includes(c)).filter(c=>`${c} ${currencyNames.of(c)}`.toLowerCase().includes(regionSearch.toLowerCase()));
-  const readyRef=useRef(false); const requestVersion=useRef(0);
-  const refreshAccount=useCallback(async()=>{
-    if(!readyRef.current)return;
-    const version=++requestVersion.current;
-    try { const user=await getUser();const next=user?await getAccount():null;if(version===requestVersion.current)setAccount(next); } catch { if(version===requestVersion.current)setAccount(null); }
-  },[]);
-  useEffect(()=>{
-    getExchangeRates().then(data=>{setRates(data.rates);setRateDate(data.date);});
-    (async()=>{
-      try{
-        const runtime=await loadRuntimeConfig();configureApi(runtime.apiBaseUrl,runtime.supabasePublishableKey);
-        const config=await api<{authReady?:boolean;membershipReady:boolean;country?:string}>('config');
-        readyRef.current=config.authReady??config.membershipReady;setAuthReady(readyRef.current);setMembershipReady(config.membershipReady);
-        try { if(!localStorage.getItem('lh_currency')&&config.country)setCurrency(currencyForCountry(config.country)); } catch { /* Browser preference remains available. */ }
-        if(!readyRef.current)return;
-        const callback=await handleAuthCallback();
-        if(callback?.type==='recovery')setAuthMode('reset');
-        if(callback?.type==='invite'&&callback.token){setInviteToken(callback.token);setAuthMode('invite');}
-        await refreshAccount();
-        const params=new URLSearchParams(window.location.search);
-        if(params.get('checkout')==='success'&&params.get('session_id')){
-          const verified=await api<{pending?:boolean;subscription:unknown}>('checkout-status',{sessionId:params.get('session_id')});
-          setNotice(verified.pending?'Your payment is still being confirmed. Refresh your membership shortly.':'Welcome to your membership. Your collection is ready to explore.');
-          await refreshAccount();setLibraryOpen(true);
-        }
-        if(params.get('checkout')==='canceled')setNotice('Checkout canceled. No membership was activated.');
-        if(params.has('checkout')||params.has('billing'))window.history.replaceState({},'',window.location.pathname);
-      }catch{if(!readyRef.current)setAuthReady(false);setMembershipReady(false);}
-    })();
-    const check=()=>{void refreshAccount();};const timer=window.setInterval(check,60000);window.addEventListener('focus',check);
-    return()=>{clearInterval(timer);window.removeEventListener('focus',check);};
-  },[refreshAccount]);
-  useEffect(()=>{
-    const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');observer.unobserve(entry.target);}}),{threshold:0.08});
-    document.querySelectorAll('.reveal').forEach(element=>observer.observe(element));return()=>observer.disconnect();
-  },[]);
-  useEffect(()=>{
-    const modal=regionOpen||article||notice||authMode||selectedPlan||legalOpen;
-    if(!modal)return;const before=document.body.style.overflow;document.body.style.overflow='hidden';
-    const close=(event:KeyboardEvent)=>{if(event.key==='Escape'){setRegionOpen(false);setArticle(null);setNotice('');setAuthMode(null);setSelectedPlan(null);setLegalOpen(false);}};
-    const previousFocus=document.activeElement as HTMLElement|null;
-    const dialogs=document.querySelectorAll<HTMLElement>('[role=dialog]');const dialog=dialogs[dialogs.length-1];
-    const focusable=()=>Array.from(dialog?.querySelectorAll<HTMLElement>('button, a[href], input, select, [tabindex="0"]')||[]).filter(element=>!element.hasAttribute('disabled')&&element.getClientRects().length>0);
-    if(dialog&&!dialog.contains(document.activeElement))focusable()[0]?.focus();
-    const trap=(event:KeyboardEvent)=>{if(event.key!=='Tab')return;const controls=focusable();const first=controls[0];const last=controls[controls.length-1];if(!first)return;if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}};
-    window.addEventListener('keydown',close);window.addEventListener('keydown',trap);return()=>{document.body.style.overflow=before;window.removeEventListener('keydown',close);window.removeEventListener('keydown',trap);previousFocus?.focus();};
-  },[regionOpen,article,notice,authMode,selectedPlan,legalOpen]);
-  function selectCurrency(code:string){setCurrency(code);try{localStorage.setItem('lh_currency',code);}catch{}setRegionOpen(false);}
-  function price(usd:number){const value=localEquivalent(usd,currency,rates);return value===null?formatAmount(usd,'USD',locale):formatAmount(value,currency,locale);}
-  function openAccount(){if(!authReady){setNotice('Membership sign-in and checkout are not available on this deployment yet. You can explore the free guides and sample tools now. Paid access will open after secure account and billing services are connected.');return;}if(account){setLibraryOpen(true);document.getElementById('member-library')?.scrollIntoView({behavior:'smooth'});}else setAuthMode('login');}
-  function choosePlan(plan:PlanDetails){if(!membershipReady){setNotice(`${plan.name} includes ${plan.features.join(', ')}. Membership checkout is not available yet, so no payment will be taken. Explore the free collection while we complete secure billing setup.`);return;}if(!account){setAuthMode('signup');return;}if(active){void manageBilling();return;}setSelectedPlan(plan);}
-  async function manageBilling(){try{await openBillingPortal();}catch(err){setNotice(err instanceof Error?err.message:'Billing could not be opened.');}}
-  async function signOut(){++requestVersion.current;setAccount(null);setLibraryOpen(false);setActivity([]);try{await logout();}catch{setNotice('Sign-out could not reach the account service. Close this browser on shared devices.');}}
-  function logActivity(label:string){setActivity(previous=>[...previous,label]);}
-  return <div className="global-site">
-    <a href="#main" className="skip-link">Skip to content</a>
-    <div className="announcement"><span>A little inspiration. A more intentional everyday.</span><button onClick={()=>setRegionOpen(true)}><Globe2 size={13}/>{currency} <span className="desktop-inline">· Change currency</span> ↗</button></div>
-    <header className="site-header"><a className="wordmark" href="#" aria-label="Lifestyle Hub home">lifestyle<span>hub</span><span className="wordmark-dot">✳</span></a><nav aria-label="Main navigation" className={mobileMenu?'site-nav open':'site-nav'}><a href="#explore" onClick={()=>setMobileMenu(false)}>The journal</a><a href="#your-rhythm" onClick={()=>setMobileMenu(false)}>Your rhythm</a><a href="#membership" onClick={()=>setMobileMenu(false)}>Membership</a></nav><div className="header-actions"><button className="account-link" onClick={openAccount}>{account?'My membership':'Member sign in'}<ArrowUpRight size={15}/></button><a className="button header-cta" href="#explore">Explore for free <ArrowUpRight size={16}/></a><button className="mobile-toggle icon-button" aria-label={mobileMenu?'Close navigation':'Open navigation'} onClick={()=>setMobileMenu(v=>!v)}>{mobileMenu?<X/>:<Menu/>}</button></div></header>
-    <main id="main">
-      <section className="hero wrap"><div className="hero-copy"><div className="eyebrow"><span className="small-star">✳</span> WELLBEING, WITH A WORLD OF POSSIBILITY</div><h1>Live well.<br/>On <em>your</em><br/>{' '}terms.</h1><p>Good food. Movement that fits. Style that feels like you. Find your everyday inspiration, wherever you call home.</p><div className="hero-actions"><a className="button primary" href="#explore">Find your inspiration <ArrowUpRight size={18}/></a><a className="text-link" href="#membership">Make it a membership <ArrowRight size={16}/></a></div><div className="hero-footnote"><span className="little-line"/> Start with the free journal. Go deeper when you’re ready.</div></div><div className="hero-visual"><img className="hero-image" src="/images/hero.jpg" alt="A woman enjoying a quiet moment of movement outdoors" fetchPriority="high"/><span className="hero-photo-label">A MOMENT TO RECONNECT</span><div className="hero-note"><span className="note-star">✳</span><span>Small rituals.<br/><strong>A life that feels more you.</strong></span></div><div className="hero-index">01 / THE EVERYDAY EDIT</div></div><span className="hero-side-note">NOURISH / MOVE / EXPRESS</span></section>
-      <div className="marquee" aria-label="Nourish your body. Move your way. Express yourself."><div className="marquee-track" aria-hidden="true">{[0,1,2,3].map(i=><span key={i}>NOURISH YOUR BODY <i>✳</i> MOVE YOUR WAY <i>✳</i> EXPRESS YOURSELF <i>✳</i></span>)}</div></div>
-      <section id="explore" className="wrap journal-section"><div className="section-heading reveal"><div><span className="eyebrow">THE EVERYDAY JOURNAL / FREE TO EXPLORE</span><h2>A little curiosity.<br/><em>A fresh perspective.</em></h2></div><p>Ideas to bring into your kitchen, your movement, and your wardrobe. Take what feels right. Make it your own.</p></div><div className="journal-grid">{FREE_ARTICLES.map((item,i)=><article className={`journal-card reveal card-${i}`} key={item.id}><button className="journal-image-button" onClick={()=>setArticle(item)} aria-label={`Read ${item.title}`}><img src={item.image} alt={['A vibrant bowl of vegetables and fresh ingredients','Fitness equipment in a bright space','People exploring personal style and clothing'][i]} loading="lazy"/><span className="image-number">0{i+1}</span><span className="image-open"><ArrowUpRight/></span></button><div className="card-meta"><span>{item.category}</span><span>{item.minutes}</span></div><h3><button onClick={()=>setArticle(item)}>{item.title}</button></h3><p>{item.subtitle}</p><button className="text-link" onClick={()=>setArticle(item)}>Read the story <ArrowRight size={15}/></button></article>)}</div></section>
-      <section id="your-rhythm" className="rhythm-section"><div className="wrap rhythm-grid"><div className="rhythm-intro reveal"><span className="eyebrow">LESS PRESSURE. MORE POSSIBILITY.</span><h2>A good life isn’t<br/>one-size-<em>fits-all.</em></h2><p>Your food, your culture, your schedule. The best routine is the one that leaves room for real life.</p><a className="button light" href="#membership">Find your starting point <ArrowUpRight size={18}/></a><div className="rhythm-orbit" aria-hidden="true">✳</div></div><div className="rhythm-steps reveal">{[['01','Nourish, your way.','Familiar flavours. Seasonal ingredients. Flexible recipes you can bring into your own kitchen.'],['02','Move, at your pace.','A short walk or a structured workout. Build a rhythm that meets you where you are.'],['03','Express, with confidence.','Explore colours and silhouettes as possibilities. Your preferences set the direction.']].map(([number,title,copy])=><div className="rhythm-step" key={number}><span>{number}</span><div><h3>{title}</h3><p>{copy}</p></div><ArrowUpRight size={21}/></div>)}</div></div></section>
-      <section className="wrap free-tools-section reveal"><StarterTimer/></section>
-      <section id="membership" className="wrap membership-section"><div className="section-heading reveal"><div><span className="eyebrow">YOUR NEXT CHAPTER</span><h2>More than inspiration.<br/><em>Make it your everyday.</em></h2></div><div><p>Start free. Choose more tools and content when you want a little structure.</p><button className="currency-pill" onClick={()=>setRegionOpen(true)}><Globe2 size={16}/>{currency} · Change currency ↗</button></div></div>
-        <div className="plan-grid"><article className="plan-card free-plan reveal"><span className="eyebrow">A LITTLE TASTE</span><h3>Free</h3><p className="plan-tagline">An open invitation to explore.</p><div className="plan-price">{formatAmount(0,currency,locale)}<span>/ always</span></div><a className="button secondary" href="#explore">Enjoy the free journal <ArrowUpRight size={16}/></a><ul>{['Three full editorial guides','One simple bowl recipe','Five-minute movement timer','No account or card needed'].map(item=><li key={item}><Check size={15}/>{item}</li>)}</ul></article>{PLANS.map(plan=><article className={`plan-card reveal ${plan.popular?'featured-plan':''}`} key={plan.id}>{plan.popular&&<span className="plan-ribbon">THE ALL-ROUND EVERYDAY</span>}<span className="eyebrow">{plan.id==='essentials'?'FOOD & FOUNDATIONS':plan.id==='plus'?'NOURISH / MOVE / EXPRESS':'YOUR SELF-GUIDED TOOLKIT'}</span><h3>{plan.name}</h3><p className="plan-tagline">{plan.tagline}</p><div className="plan-price">{currency!=='USD'&&localEquivalent(plan.price,currency,rates)!==null&&<small>≈</small>}{price(plan.price)}<span>/ month</span></div><span className="base-price">USD {plan.price.toFixed(2)} base price · billed monthly</span><button className={`button ${plan.popular?'warm':'secondary'}`} onClick={()=>choosePlan(plan)}>{active?'Manage membership':plan.buttonText}<ArrowUpRight size={16}/></button><ul>{plan.features.map(item=><li key={item}><Check size={15}/>{item}</li>)}</ul></article>)}</div>
-        <div className="pricing-note"><Globe2 size={18}/><p>{currency==='USD'?'Prices shown in USD.':'Local equivalents are estimates, not payment quotes.'} All subscriptions are billed in USD. Local equivalents are for reference only. Your bank or card issuer sets any conversion rate and fees; Stripe shows the USD total before payment.{rateDate&&currency!=='USD'&&` Estimate rate date: ${rateDate}.`}</p></div>
-        <div className="membership-preview reveal"><div><span className="eyebrow">SEE THE DIFFERENCE</span><h3>Your membership opens a bigger world.</h3><p>Explore the collection and see exactly what each plan unlocks.</p></div><button className="button primary" onClick={()=>{setLibraryOpen(v=>!v);window.setTimeout(()=>document.getElementById('member-library')?.scrollIntoView({behavior:'smooth'}),0);}}>{libraryOpen?'Close collection':'Preview the member collection'}<ArrowUpRight size={17}/></button></div>
-      </section>
-      {libraryOpen&&<section id="member-library" className="wrap member-library"><div className="section-heading"><div><span className="eyebrow">THE MEMBER COLLECTION</span><h2>{active?`Welcome, ${account?.user.name.split(' ')[0]||'member'}.`:'Your everyday, with more possibilities.'}</h2></div>{account&&<div className="flex gap-4"><button className="text-link" onClick={()=>void refreshAccount()}>Refresh membership</button>{active&&<button className="text-link" onClick={()=>void manageBilling()}>Manage billing</button>}<button className="text-link" onClick={()=>void signOut()}>Sign out</button></div>}</div><div className="library-tabs" role="tablist" aria-label="Member collections">{[['classic','Classic Edition','Members'],['recipes','Food & meal planner','Essentials'],['workouts','Movement library','Plus'],['styling','Colour & style studio','Plus'],['programs','Four-week programs','Complete']].map(([id,title,tier])=><button key={id} role="tab" aria-selected={libraryTab===id} onClick={()=>setLibraryTab(id)}>{title}<span>{tier}</span></button>)}</div>{!active?<div className="locked-collection"><div className="lock-icon"><LockKeyhole size={25}/></div><span className="eyebrow">A PREVIEW OF WHAT’S NEXT</span><h3>{libraryTab==='classic'?'The earlier design. A richer member experience.':libraryTab==='recipes'?'From “what’s for dinner?” to a week of ideas.':libraryTab==='workouts'?'A little more structure for your movement.':libraryTab==='styling'?'Discover your own colour story.':'Small steps. A four-week sense of direction.'}</h3><p>{libraryTab==='classic'?'The previous tabbed editorial design is preserved inside membership, with food, fashion and fitness editions. Essentials unlocks food; Plus and Complete open all three.':libraryTab==='recipes'?'Explore fifteen recipes and five meal collections, then plan your week and generate a grocery list.':libraryTab==='workouts'?'Explore full routines, follow interval timers and keep a simple log of the activities you complete.':libraryTab==='styling'?'Explore silhouette ideas and seasonal colour palettes in an interactive studio.': 'Complete members unlock three self-guided programs with weekly actions and reflection checklists.'}</p>{libraryTab==='classic'&&<div className="classic-preview"><div className="classic-preview-top"><strong>Lifestyle Hub</strong><span>CLASSIC EDITION / MEMBER PREVIEW</span></div><div className="classic-preview-grid">{[['Food & diets','15 recipes · 5 collections','food'],['Fashion & style','8 palettes · 8 outfit ideas','style'],['Fitness & exercise','10 movement routines','move']].map(([title,count,image])=><div className="classic-preview-card" key={title}><img src={`/images/${image}.jpg`} alt="" loading="lazy"/><div><span className="eyebrow">THE CLASSIC MEMBER EDIT</span><h4>{title}</h4><small>{count}</small></div></div>)}</div><div className="classic-preview-label">Design preview only. Full editions and tools require the appropriate paid membership.</div></div>}<div className="preview-chips"><span>Real tools</span><span>Full collections</span><span>Verified member access</span></div><a href="#membership" className="button primary" onClick={()=>setLibraryOpen(false)}>Compare memberships <ArrowUpRight size={16}/></a></div>:libraryTab==='classic'?<ClassicMemberExperience tier={subscription!.tier} onOpenPlans={()=>document.getElementById('membership')?.scrollIntoView({behavior:'smooth'})} onLogActivity={logActivity}/>:<MemberContent<any> key={`${account?.user.id}-${subscription?.tier}-${libraryTab}`} kind={libraryTab} onOpenPlans={()=>document.getElementById('membership')?.scrollIntoView({behavior:'smooth'})}>{data=>libraryTab==='recipes'?<MemberFoodCollection recipes={data.recipes} collections={data.collections} canExport={subscription?.tier==='coach'} onLogMeal={id=>logActivity(`Meal: ${id}`)}/>:libraryTab==='workouts'?<CardioWorkoutsPage routines={data.routines} onLogWorkout={(id,minutes)=>logActivity(`${minutes} minutes: ${id}`)} completedWorkoutIds={[]}/>:libraryTab==='styling'?<MemberStyleCollection styling={data.styling} palettes={data.palettes} looks={data.looks}/>:<div className="program-grid">{data.programs.map((program:any)=><article className="program-card" key={program.id}><span className="eyebrow">FOUR WEEKS / SELF-GUIDED</span><h3>{program.title}</h3><p>{program.description}</p>{program.weeks.map((week:any,i:number)=><details key={week.title}><summary>Week {i+1} · {week.title}</summary>{week.steps.map((step:string,j:number)=>{const id=`${program.id}-${i}-${j}`;return <label className="program-step" key={id}><input type="checkbox" checked={savedPrograms.includes(id)} onChange={()=>setSavedPrograms(previous=>previous.includes(id)?previous.filter(value=>value!==id):[...previous,id])}/>{step}</label>;})}</details>)}</article>)}</div>}</MemberContent>}{activity.length>0&&<div className="activity-log"><h3>Your session activity</h3><ul>{activity.map((entry,i)=><li key={i}>{entry}</li>)}</ul><p>Activity and checklists last for this browser session.</p></div>}</section>}
-      <section className="global-note wrap reveal"><div className="global-note-mark"><Globe2 strokeWidth={1}/></div><div><span className="eyebrow">INSPIRED BY EVERYWHERE. MADE PERSONAL.</span><h2>Different time zones.<br/><em>The same everyday possibilities.</em></h2><p>From your morning in Mumbai to an evening in Melbourne. Explore at your pace, choose your currency, and bring your own flavours, culture and style.</p><button className="text-link" onClick={()=>setRegionOpen(true)}>Make yourself at home <ArrowUpRight size={16}/></button></div><div className="world-cities" aria-hidden="true"><span>MUMBAI</span><span>LONDON</span><span>NEW YORK</span><span>MELBOURNE</span><span>SINGAPORE</span></div></section>
-      <section className="wrap faq-section"><div className="faq-intro"><span className="eyebrow">A FEW THINGS TO KNOW</span><h2>Curious?<br/><em>Good place to start.</em></h2></div><div className="faq-list">{FAQS.map(([question,answer],i)=><div className="faq-item" key={question}><button aria-expanded={openFAQ===i} aria-controls={`faq-${i}`} onClick={()=>setOpenFAQ(previous=>previous===i?null:i)}>{question}{openFAQ===i?<Minus size={18}/>:<Plus size={18}/>}</button>{openFAQ===i&&<p id={`faq-${i}`}>{answer}</p>}</div>)}</div></section>
-      <section className="closing-section"><div className="wrap"><span className="eyebrow">YOUR EVERYDAY IS WAITING</span><h2>A little more<br/><em>life in your lifestyle.</em></h2><a className="button primary" href="#explore">Take a look around <ArrowUpRight size={18}/></a><span className="closing-star" aria-hidden="true">✳</span></div></section>
-    </main><footer className="site-footer wrap"><div><a className="wordmark" href="#">lifestyle<span>hub</span>✳</a><p>Good food. Intentional movement. Your own kind of style.</p></div><div className="footer-links"><a href="#explore">Journal</a><a href="#membership">Membership</a><button onClick={()=>setLegalOpen(true)}>Terms & medical disclaimer</button><button onClick={()=>setRegionOpen(true)}>{currency} · Currency</button></div><div className="footer-bottom"><span>© {new Date().getFullYear()} Radiant Spark LLC</span><span>Educational content. Your wellbeing, your decisions.</span></div></footer>
-    {regionOpen&&<div className="site-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="region-title"><div className="site-modal region-modal"><button className="modal-close icon-button" aria-label="Close currency selector" onClick={()=>setRegionOpen(false)}><X/></button><Globe2 className="modal-symbol"/><span className="eyebrow">FEEL A LITTLE MORE AT HOME</span><h2 id="region-title">Your world.<br/><em>Your currency.</em></h2><p>We start with your browser preferences, or your region when available. You can choose another currency anytime.</p><label className="search-label">Find a currency<input autoFocus value={regionSearch} onChange={e=>setRegionSearch(e.target.value)} placeholder="Search INR, euro, British pound…"/></label><div className="currency-options">{currencies.map(code=><button key={code} onClick={()=>selectCurrency(code)} aria-pressed={code===currency}><span>{code}</span>{currencyNames.of(code)}{code===currency&&<Check size={16}/>}</button>)}</div><small>Estimates are shown when a recent exchange rate is available. Checkout bills in USD. Your bank may convert the charge to your card’s currency.</small></div></div>}
-    {article&&<div className="site-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="article-title"><article className="site-modal article-modal"><button className="modal-close icon-button" aria-label="Close article" onClick={()=>setArticle(null)}><X/></button><img src={article.image} alt=""/><div className="article-body"><span className="eyebrow">{article.category} / THE FREE JOURNAL</span><h2 id="article-title">{article.title}</h2>{article.paragraphs.map(paragraph=><p key={paragraph}>{paragraph}</p>)}<button className="button primary" onClick={()=>{setArticle(null);document.getElementById('membership')?.scrollIntoView({behavior:'smooth'});}}>Explore membership <ArrowUpRight size={16}/></button></div></article></div>}
-    {notice&&<div className="site-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="notice-title"><div className="site-modal notice-modal"><button className="modal-close icon-button" aria-label="Close message" onClick={()=>setNotice('')}><X/></button><span className="notice-star">✳</span><h2 id="notice-title">A little note.</h2><p>{notice}</p><button className="button primary" onClick={()=>{setNotice('');document.getElementById('explore')?.scrollIntoView({behavior:'smooth'});}}>Explore the free journal <ArrowUpRight size={16}/></button></div></div>}
-    {authMode&&<AuthModal initialMode={authMode} inviteToken={inviteToken} onClose={()=>setAuthMode(null)} onSuccess={refreshAccount}/>}
-    <StripeCheckoutModal key={selectedPlan?.id||'closed'} plan={selectedPlan} isOpen={!!selectedPlan} onClose={()=>setSelectedPlan(null)} onOpenLegalShield={()=>setLegalOpen(true)}/>
-    <LegalShieldModal isOpen={legalOpen} onClose={()=>setLegalOpen(false)} consentRecord={null}/>
-  </div>;
+  const [activeTab, setActiveTab] = useState<NavTab>('trends');
+  const [fashionSubView, setFashionSubView] = useState<'trends' | 'studio'>('trends');
+  const [exerciseSubView, setExerciseSubView] = useState<'trends' | 'workout'>('trends');
+  const [foodSubView, setFoodSubView] = useState<'trends' | 'recipes'>('trends');
+
+  const [selectedPlanForCheckout, setSelectedPlanForCheckout] = useState<PlanDetails | null>(null);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+
+  // Subscription state from storage
+  const [subscription, setSubscription] = useState<SubscriptionState | null>(() => {
+    const saved = getStoredSubscription();
+    if (saved) return saved;
+    // Default active Plus subscription so all pages are unlocked and verifiable out of the box
+    return {
+      isActive: true,
+      tier: 'plus',
+      subscribedAt: new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }),
+      customerName: 'Sarah Jenkins',
+      customerEmail: 'sarah.jenkins@example.com',
+      paymentMethod: 'Visa •••• 4242 (Stripe Verified)',
+      invoiceId: 'INV-STR-8942-PL',
+      autoRenew: true,
+    };
+  });
+
+  // User progress data from storage
+  const [progress, setProgress] = useState<UserProgressData>(() => {
+    try {
+      const saved = localStorage.getItem('lifestylehub_progress_v1');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Failed to parse progress from storage:', e);
+    }
+    return DEFAULT_PROGRESS;
+  });
+
+  // Legal Consent record
+  const [consentRecord, setConsentRecord] = useState<LegalConsentRecord | null>(() => {
+    try {
+      const saved = localStorage.getItem('lifestylehub_legal_consent');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Failed to read consent:', e);
+    }
+    return {
+      hasConsented: true,
+      termsAcceptedDate: 'Nov 2, 2026',
+      signatureName: 'Sarah Jenkins',
+      parqClearanceConfirmed: true,
+      ipMock: 'SEC-8942',
+    };
+  });
+
+  // Save progress changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('lifestylehub_progress_v1', JSON.stringify(progress));
+    } catch (e) {
+      console.error('Failed to save progress:', e);
+    }
+  }, [progress]);
+
+  // Handlers
+  const handleSelectPlan = (plan: PlanDetails) => {
+    setSelectedPlanForCheckout(plan);
+  };
+
+  const handleCheckoutSuccess = (newSub: SubscriptionState) => {
+    setSubscription(newSub);
+    saveStoredSubscription(newSub);
+    setActiveTab('dashboard');
+  };
+
+  const handleUpdateWeight = (newWeight: number) => {
+    const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    setProgress((prev) => ({
+      ...prev,
+      currentWeight: newWeight,
+      weightHistory: [...prev.weightHistory, { date: todayLabel, weight: newWeight }],
+    }));
+  };
+
+  const handleToggleWater = (glassIndex: number) => {
+    setProgress((prev) => {
+      const current = prev.waterGlasses;
+      const next = glassIndex < current ? glassIndex : glassIndex + 1;
+      return { ...prev, waterGlasses: next };
+    });
+  };
+
+  const handleUpdateConfidence = (score: number) => {
+    setProgress((prev) => ({ ...prev, confidenceScore: score }));
+  };
+
+  const handleLogWorkout = (routineId: string, minutes: number, calories: number) => {
+    setProgress((prev) => ({
+      ...prev,
+      cardioMinutesToday: prev.cardioMinutesToday + minutes,
+      caloriesBurnedToday: prev.caloriesBurnedToday + calories,
+      completedWorkoutIds: prev.completedWorkoutIds.includes(routineId)
+        ? prev.completedWorkoutIds
+        : [...prev.completedWorkoutIds, routineId],
+    }));
+    setActiveTab('dashboard');
+  };
+
+  const handleLogMeal = (recipeId: string) => {
+    setProgress((prev) => ({
+      ...prev,
+      completedRecipeIds: prev.completedRecipeIds.includes(recipeId)
+        ? prev.completedRecipeIds
+        : [...prev.completedRecipeIds, recipeId],
+      streakDays: prev.streakDays + 1,
+    }));
+    setActiveTab('dashboard');
+  };
+
+  const handleDownloadZip = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/lifestylehub-final.zip');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/zip' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'lifestylehub-final.zip';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch {
+      window.location.href = '/lifestylehub-final.zip';
+    }
+  };
+
+  const isUnlocked = subscription?.isActive === true;
+
+  return (
+    <div className="min-h-screen bg-[#FAF7F2] text-[#1F1C18] flex flex-col justify-between selection:bg-[#EED989] selection:text-[#1F1C18]">
+      {/* Top Navigation */}
+      <Navigation
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        subscription={subscription}
+      />
+
+      {/* Main App Content Viewport */}
+      <main className="flex-1 pb-24 lg:pb-12">
+        {/* TAB 0: TRENDS 2026 HOME */}
+        {activeTab === 'trends' && (
+          <TrendsHomeSection
+            onNavigate={setActiveTab}
+            onOpenPlans={() => setActiveTab('plans')}
+          />
+        )}
+
+        {/* TAB 1: FASHION (ISSUE 01) */}
+        {activeTab === 'fashion' && (
+          <div>
+            {/* View Sub-Toggle */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 flex items-center justify-between">
+              <div className="inline-flex p-1 bg-[#F3EFEA] rounded-full border border-[#E8E2D8]">
+                <button
+                  onClick={() => setFashionSubView('trends')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    fashionSubView === 'trends'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Fashion Trends & Looks</span>
+                </button>
+                <button
+                  onClick={() => setFashionSubView('studio')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    fashionSubView === 'studio'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <Sliders className="w-3.5 h-3.5 text-[#EED989]" />
+                  <span>Body Silhouettes & Colors</span>
+                </button>
+              </div>
+            </div>
+
+            {fashionSubView === 'trends' ? (
+              <EditorialIssueView
+                issue={LIFESTYLE_ISSUES.fashion}
+                onOpenActionSuite={() => setFashionSubView('studio')}
+                actionSuiteTitle="Body Shapes & Color Combinations"
+                actionSuiteSubtitle="Match tailored cuts and 4 seasonal color palettes to your exact body silhouette to boost everyday confidence."
+              />
+            ) : (
+              <FashionConfidencePage />
+            )}
+          </div>
+        )}
+
+        {/* TAB 2: FOOD (ISSUE 02) */}
+        {activeTab === 'diets' && (
+          <div>
+            {/* View Sub-Toggle */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 flex items-center justify-between">
+              <div className="inline-flex p-1 bg-[#F3EFEA] rounded-full border border-[#E8E2D8]">
+                <button
+                  onClick={() => setFoodSubView('trends')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    foodSubView === 'trends'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Food Trends 2026</span>
+                </button>
+                <button
+                  onClick={() => setFoodSubView('recipes')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    foodSubView === 'recipes'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-[#EED989]" />
+                  <span>Healthy Cooking Recipes & Timer</span>
+                </button>
+              </div>
+            </div>
+
+            {foodSubView === 'trends' ? (
+              <EditorialIssueView
+                issue={LIFESTYLE_ISSUES.food}
+                onOpenActionSuite={() => setFoodSubView('recipes')}
+                actionSuiteTitle="Simple & Healthy Cooking Kitchen"
+                actionSuiteSubtitle="Step-by-step recipes, precision cooking timers, prebiotic fiber-maxxing tracks, and interactive grocery checklists."
+              />
+            ) : (
+              <DietPlansPage
+                onLogMeal={handleLogMeal}
+                completedRecipeIds={progress.completedRecipeIds}
+              />
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: FITNESS & EXERCISE (ISSUE 03) */}
+        {activeTab === 'cardio' && (
+          <div>
+            {/* View Sub-Toggle */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 flex items-center justify-between">
+              <div className="inline-flex p-1 bg-[#F3EFEA] rounded-full border border-[#E8E2D8]">
+                <button
+                  onClick={() => setExerciseSubView('trends')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    exerciseSubView === 'trends'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Fitness Trends 2026</span>
+                </button>
+                <button
+                  onClick={() => setExerciseSubView('workout')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    exerciseSubView === 'workout'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <Zap className="w-3.5 h-3.5 text-[#EED989]" />
+                  <span>Simple Cardio Fat-Burn Timers</span>
+                </button>
+              </div>
+            </div>
+
+            {exerciseSubView === 'trends' ? (
+              <EditorialIssueView
+                issue={LIFESTYLE_ISSUES.exercise}
+                onOpenActionSuite={() => setExerciseSubView('workout')}
+                actionSuiteTitle="Simple Cardio Weight Loss Protocols"
+                actionSuiteSubtitle="Zone 2 fat oxidation walks, living-room zero-jump circuits, interval countdown timers, and age-based BPM calculators."
+              />
+            ) : (
+              <CardioWorkoutsPage
+                onLogWorkout={handleLogWorkout}
+                completedWorkoutIds={progress.completedWorkoutIds}
+              />
+            )}
+          </div>
+        )}
+
+        {/* TAB 4: PERSONAL DASHBOARD */}
+        {activeTab === 'dashboard' && (
+          <PersonalizedDashboard
+            progress={progress}
+            subscription={subscription}
+            onUpdateWeight={handleUpdateWeight}
+            onToggleWater={handleToggleWater}
+            onUpdateConfidence={handleUpdateConfidence}
+            onOpenPlans={() => setActiveTab('plans')}
+            onOpenLegalShield={() => setIsLegalModalOpen(true)}
+          />
+        )}
+
+        {/* TAB 5: PLANS & PRICING */}
+        {activeTab === 'plans' && (
+          <PricingPlans
+            currentSubscription={subscription}
+            onSelectPlan={handleSelectPlan}
+            onOpenLegalShield={() => setIsLegalModalOpen(true)}
+          />
+        )}
+
+        {/* TAB 6: LEGAL SHIELD */}
+        {activeTab === 'legal' && (
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+            <div className="p-8 rounded-3xl bg-white border border-[#E8E2D8] shadow-sm space-y-6">
+              <div className="flex items-center gap-3 pb-4 border-b border-stone-200">
+                <ShieldCheck className="w-6 h-6 text-emerald-600" />
+                <div>
+                  <h2 className="text-2xl font-display font-light text-stone-900">
+                    Legal Shield & Corporate Protection
+                  </h2>
+                  <p className="text-xs text-stone-500">
+                    Comprehensive enforceable waivers, medical disclaimers, and mandatory AAA arbitration.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-stone-700">
+                <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200">
+                  <h4 className="font-bold text-stone-900 mb-1">1. Non-Medical Education Only</h4>
+                  <p>LifestyleHub content does not constitute medical advice or clinical dietetics. Users must consult a licensed physician prior to caloric deficits or physical exercise.</p>
+                </div>
+                <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200">
+                  <h4 className="font-bold text-stone-900 mb-1">2. Cardiovascular Risk Assumption</h4>
+                  <p>In accordance with PAR-Q standards, users voluntarily assume all inherent risks of physical cardio and release the company from all personal injury claims.</p>
+                </div>
+                <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200">
+                  <h4 className="font-bold text-stone-900 mb-1">3. Mandatory Individual Arbitration</h4>
+                  <p>All claims must be resolved individually through binding AAA arbitration. All class actions and jury trials are waived.</p>
+                </div>
+                <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200">
+                  <h4 className="font-bold text-stone-900 mb-1">4. Maximum Liability Cap</h4>
+                  <p>Total company liability is capped strictly at total fees paid during the prior 3 months or $50.00 USD.</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsLegalModalOpen(true)}
+                className="px-6 py-3 rounded-full bg-[#1F1C18] text-[#FAF7F2] text-xs font-semibold hover:bg-black transition cursor-pointer"
+              >
+                Inspect Full Legal Shield & Signed Certificate
+              </button>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Editorial Footer */}
+      <footer className="border-t border-[#E8E2D8] bg-[#FAF7F2] py-8 px-4 sm:px-6 text-xs text-stone-500">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="font-display font-medium text-stone-900 text-sm">Lifestyle Hub</span>
+            <span>•</span>
+            <span>Fashion, Food & Fitness Trends 2026</span>
+            <span>•</span>
+            <span className="text-emerald-700 font-medium">Offline PWA Synced</span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setActiveTab('trends')}
+              className="hover:text-stone-900 transition"
+            >
+              Trends 2026
+            </button>
+            <button
+              onClick={() => setActiveTab('plans')}
+              className="hover:text-stone-900 transition"
+            >
+              Pricing Plans
+            </button>
+            <button
+              onClick={() => setIsLegalModalOpen(true)}
+              className="hover:text-stone-900 underline underline-offset-2 transition"
+            >
+              Medical Disclaimer & Terms
+            </button>
+            <button
+              onClick={handleDownloadZip}
+              className="hover:text-stone-900 underline underline-offset-2 text-stone-500 font-medium transition cursor-pointer"
+              title="Download verified Windows-compatible project bundle (.ZIP)"
+            >
+              Owner: Download Project .ZIP
+            </button>
+          </div>
+        </div>
+      </footer>
+
+      {/* Global Modals & Indicators */}
+      <StripeCheckoutModal
+        plan={selectedPlanForCheckout}
+        isOpen={!!selectedPlanForCheckout}
+        onClose={() => setSelectedPlanForCheckout(null)}
+        onSuccess={handleCheckoutSuccess}
+        onOpenLegalShield={() => setIsLegalModalOpen(true)}
+      />
+
+      <LegalShieldModal
+        isOpen={isLegalModalOpen}
+        onClose={() => setIsLegalModalOpen(false)}
+        consentRecord={consentRecord}
+      />
+
+      <OfflineIndicator />
+    </div>
+  );
 }
