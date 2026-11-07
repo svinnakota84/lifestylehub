@@ -57,9 +57,9 @@ export const EditorialIssueView: React.FC<EditorialIssueViewProps> = ({
           </span>
         </div>
 
-        <h1 className="text-4xl sm:text-6xl font-display font-light text-[#1F1C18] mt-2 tracking-tight">
+        <h2 className="text-4xl sm:text-6xl font-display font-light text-[#1F1C18] mt-2 tracking-tight">
           {issue.headline}
-        </h1>
+        </h2>
 
         <p className="text-base sm:text-lg text-stone-600 mt-3 max-w-2xl leading-relaxed">
           {issue.intro}

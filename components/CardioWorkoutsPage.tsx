@@ -89,17 +89,17 @@ export const CardioWorkoutsPage: React.FC<CardioWorkoutsPageProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold uppercase tracking-widest text-[#C19A6B]">
-              Fat-Oxidation Science
+              Movement at Your Pace
             </span>
             <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
               Unlocked & Ready
             </span>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-serif-luxury font-normal text-[#1A1918] mt-1 tracking-tight">
-            Simple Cardio for Weight Loss
-          </h1>
+          <h2 className="text-3xl sm:text-5xl font-serif-luxury font-normal text-[#1A1918] mt-1 tracking-tight">
+            Movement Library & Interval Timers
+          </h2>
           <p className="text-xs sm:text-sm text-stone-600 mt-2 max-w-2xl leading-relaxed">
-            Discover why low-intensity steady-state (LISS) and gentle bodyweight intervals burn significantly more fat than grueling high-cortisol workouts. No joint pain, no burnout.
+            Choose a routine, begin gradually and adjust the pace to your needs. Stop for pain, dizziness or unusual discomfort. Ask a qualified professional about suitability if you have a condition or injury.
           </p>
         </div>
 
@@ -110,7 +110,7 @@ export const CardioWorkoutsPage: React.FC<CardioWorkoutsPageProps> = ({
           </div>
           <div className="text-xs">
             <div className="flex items-center gap-1.5 font-bold text-stone-900">
-              <span>Your Fat-Burn Zone:</span>
+              <span>Illustrative heart-rate range:</span>
               <span className="text-rose-600 font-mono">{fatBurnMin} - {fatBurnMax} BPM</span>
             </div>
             <div className="flex items-center gap-1 text-[11px] text-stone-500 mt-0.5">
@@ -123,7 +123,7 @@ export const CardioWorkoutsPage: React.FC<CardioWorkoutsPageProps> = ({
                 onChange={(e) => setUserAge(Number(e.target.value) || 30)}
                 className="w-10 px-1 py-0.5 text-center bg-stone-100 rounded border border-stone-300 font-mono text-stone-800"
               />
-              <span>yrs (Zone 2: 60-70% Max)</span>
+              <span>yrs · estimate only, not a personal target</span>
             </div>
           </div>
         </div>
@@ -137,15 +137,15 @@ export const CardioWorkoutsPage: React.FC<CardioWorkoutsPageProps> = ({
           </div>
           <div>
             <h3 className="font-serif-luxury font-bold text-base text-stone-900">
-              Why Simple Cardio Shrinks Visceral Fat Faster
+              Build a Movement Rhythm That Fits
             </h3>
             <p className="text-xs text-stone-700 mt-1 leading-relaxed max-w-3xl">
-              Unlike grueling sprints that flood the body with cortisol (a stress hormone that triggers sugar cravings and forces the liver to hold onto abdominal fat), gentle rhythmic cardio operates at the exact respiratory quotient where <strong>free fatty acids supply up to 85% of total caloric fuel</strong>.
+              Begin with a comfortable duration and build gradually. The timers are prompts, not requirements. These routines do not guarantee a specific calorie burn, weight change or health outcome.
             </p>
           </div>
         </div>
         <div className="text-[11px] font-semibold text-stone-800 bg-white/80 px-3 py-2 rounded-xl border border-stone-200 whitespace-nowrap">
-          Zero Joint Stress Guarantee
+          Your Pace · Take Breaks
         </div>
       </div>
 
@@ -203,7 +203,7 @@ export const CardioWorkoutsPage: React.FC<CardioWorkoutsPageProps> = ({
                   </span>
                   <span>•</span>
                   <span className="flex items-center gap-1">
-                    <Flame className="w-3.5 h-3.5 text-amber-500" /> ~{routine.caloriesBurn} kcal
+                    <Flame className="w-3.5 h-3.5 text-amber-500" /> {routine.caloriesBurn > 0 ? `~${routine.caloriesBurn} kcal (estimate)` : 'Energy not estimated'}
                   </span>
                   <span>•</span>
                   <span className="text-[#C19A6B] font-semibold">{routine.level}</span>
@@ -325,7 +325,7 @@ export const CardioWorkoutsPage: React.FC<CardioWorkoutsPageProps> = ({
           {/* Complete & Log CTA */}
           <div className="mt-6 pt-4 border-t border-stone-100 flex flex-wrap items-center justify-between gap-3">
             <span className="text-xs text-stone-500">
-              Burning approx. {activeRoutine.caloriesBurn} kcal • {activeRoutine.durationMin} active minutes
+              {activeRoutine.caloriesBurn > 0 ? `Energy estimate: ${activeRoutine.caloriesBurn} kcal · ` : 'No calorie-burn estimate · '}{activeRoutine.durationMin} planned minutes
             </span>
             <button
               onClick={() => {

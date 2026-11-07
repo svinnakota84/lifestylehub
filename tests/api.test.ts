@@ -141,3 +141,23 @@ test('Complete programs are denied to Plus and granted only to Complete', async 
   assert.equal(response.status, 200);
   const data=await response.json();assert.equal(data.programs.length,3);assert.ok(data.programs.every((program:any)=>program.weeks.length===4));
 });
+test('Classic Edition requires authentication and an active paid membership', async()=>{
+  assert.equal((await fixture({user:null}).request('content?kind=classic-food')).status,401);
+  assert.equal((await fixture().request('content?kind=classic-food')).status,403);
+});
+test('Essentials unlocks Classic food but cannot open Classic fashion or fitness', async()=>{
+  const sub=validSubscription();sub.items.data[0].price.product='lifestylehub_essentials_v1';sub.items.data[0].price.unit_amount=999;
+  const {request}=fixture({subscription:sub});
+  const food=await request('content?kind=classic-food');assert.equal(food.status,200);assert.equal((await food.json()).recipes.length,15);
+  assert.equal((await request('content?kind=classic-fashion')).status,403);
+  assert.equal((await request('content?kind=classic-exercise')).status,403);
+});
+test('Plus unlocks all Classic editions and the expanded collections',async()=>{
+  const {request}=fixture({subscription:validSubscription()});
+  const food=await (await request('content?kind=classic-food')).json();
+  assert.equal(food.issue.items.length,8);assert.equal(food.recipes.length,15);assert.equal(food.collections.length,5);
+  const fashion=await (await request('content?kind=classic-fashion')).json();
+  assert.equal(fashion.issue.items.length,8);assert.equal(fashion.palettes.length,8);assert.equal(fashion.looks.length,8);
+  const fitness=await (await request('content?kind=classic-exercise')).json();
+  assert.equal(fitness.issue.items.length,8);assert.equal(fitness.routines.length,10);
+});

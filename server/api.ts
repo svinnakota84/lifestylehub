@@ -1,9 +1,7 @@
 import Stripe from 'stripe';
 import { getStore } from '@netlify/blobs';
 import type { User } from '@netlify/identity';
-import { HEALTHY_RECIPES } from '../data/recipesData';
-import { CARDIO_ROUTINES } from '../data/cardioData';
-import { BODY_SHAPE_STYLING, COLOR_SEASONS } from '../data/fashionData';
+import { MEMBER_RECIPES, MEMBER_ROUTINES, MEMBER_PALETTES, MEMBER_STYLING, MEAL_COLLECTIONS, OUTFIT_LOOKS, CLASSIC_ISSUES } from '../data/memberExpansion';
 import { MEMBER_PROGRAMS } from '../data/memberGuides';
 import type { SubscriptionState } from '../types';
 
@@ -104,10 +102,13 @@ export function createApi(deps: ApiDependencies) {
       if (path === 'content') {
         if (!sub) throw new HttpError(403, 'An active paid membership is required.');
         const kind = new URL(request.url).searchParams.get('kind');
-        if (kind === 'recipes') return json({ recipes: HEALTHY_RECIPES });
-        if (!['plus', 'coach'].includes(sub.tier)) throw new HttpError(403, 'This feature requires Plus or Coach membership.');
-        if (kind === 'workouts') return json({ routines: CARDIO_ROUTINES });
-        if (kind === 'styling') return json({ styling: BODY_SHAPE_STYLING, palettes: COLOR_SEASONS });
+        if (kind === 'recipes') return json({ recipes: MEMBER_RECIPES, collections: MEAL_COLLECTIONS });
+        if (kind === 'classic-food') return json({ issue: CLASSIC_ISSUES.food, recipes: MEMBER_RECIPES, collections: MEAL_COLLECTIONS });
+        if (!['plus', 'coach'].includes(sub.tier)) throw new HttpError(403, 'This feature requires Plus or Complete membership.');
+        if (kind === 'workouts') return json({ routines: MEMBER_ROUTINES });
+        if (kind === 'classic-exercise') return json({ issue: CLASSIC_ISSUES.exercise, routines: MEMBER_ROUTINES });
+        if (kind === 'styling') return json({ styling: MEMBER_STYLING, palettes: MEMBER_PALETTES, looks: OUTFIT_LOOKS });
+        if (kind === 'classic-fashion') return json({ issue: CLASSIC_ISSUES.fashion, styling: MEMBER_STYLING, palettes: MEMBER_PALETTES, looks: OUTFIT_LOOKS });
         if (kind === 'programs') {
           if (sub.tier !== 'coach') throw new HttpError(403, 'Four-week programs require Complete membership.');
           return json({ programs: MEMBER_PROGRAMS });
