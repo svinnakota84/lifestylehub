@@ -27,7 +27,7 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({
           </h1>
         </div>
         <p className="text-xs sm:text-sm text-stone-600 max-w-xs md:text-right leading-relaxed">
-          Billed monthly through Stripe's secure checkout. Cancel any time.
+          Monthly prices in USD. Checkout activation is pending.
         </p>
       </div>
 
@@ -40,14 +40,14 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="font-semibold text-xs sm:text-sm text-emerald-950">
-                Stripe Business Gateway Active
+                Checkout connection pending
               </span>
               <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
-                Ready for Customers
+                Not accepting payments
               </span>
             </div>
             <p className="text-xs text-stone-600">
-              The payment configuration issue is resolved. Customers can subscribe seamlessly, and plans unlock instantly offline and online.
+              Payments and private member access require a secure server connection. No subscription is activated by this form.
             </p>
           </div>
         </div>
@@ -141,7 +141,7 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({
                     <span>{isCurrentTier ? 'Current Active Plan' : plan.buttonText}</span>
                   </button>
                   <p className="text-center text-[10px] text-stone-400 mt-2">
-                    Instant Stripe checkout • Cancel any time
+                    USD monthly pricing • Activation pending
                   </p>
                 </div>
               </div>
@@ -188,7 +188,7 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({
                   <span>{isCurrentTier ? 'Current Active Plan' : plan.buttonText}</span>
                 </button>
                 <p className="text-center text-[10px] text-stone-500 mt-2">
-                  Stripe encrypted • Billed monthly
+                  USD monthly pricing • Activation pending
                 </p>
               </div>
             </div>
@@ -203,9 +203,9 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({
             <Lock className="w-5 h-5 text-stone-800" />
           </div>
           <div>
-            <h4 className="font-semibold text-stone-900">Stripe Customer Guarantee</h4>
+            <h4 className="font-semibold text-stone-900">Clear billing terms</h4>
             <p className="text-stone-500">
-              No hidden fees, no long contracts. Change or cancel plans anytime with 1 tap.
+              Prices are in USD. Paid subscriptions are not enabled until secure checkout is connected.
             </p>
           </div>
         </div>

@@ -25,31 +25,19 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 import { PlanDetails, SubscriptionState, UserProgressData, LegalConsentRecord } from './types';
 import { PRICING_PLANS } from './data/pricingPlans';
 import { LIFESTYLE_ISSUES } from './data/lifestyleTrendsData';
-import { getStoredSubscription, saveStoredSubscription } from './services/stripeService';
+import { getVerifiedSubscription } from './services/stripeService';
+import { DailyLiving } from './components/DailyLiving';
 
 const DEFAULT_PROGRESS: UserProgressData = {
-  currentWeight: 154.2,
-  targetWeight: 140.0,
-  startWeight: 162.0,
-  weightHistory: [
-    { date: 'Oct 12', weight: 162.0 },
-    { date: 'Oct 19', weight: 159.5 },
-    { date: 'Oct 26', weight: 156.8 },
-    { date: 'Nov 02', weight: 154.2 },
-  ],
-  waterGlasses: 5,
-  waterDate: new Date().toDateString(),
-  cardioMinutesToday: 25,
-  caloriesBurnedToday: 185,
-  completedWorkoutIds: ['zone2-fat-burn-walk'],
-  completedRecipeIds: ['lemon-herb-crispy-salmon'],
-  streakDays: 6,
-  confidenceScore: 9,
-  dailyAffirmation: 'Consistency in simple habits builds unshakeable energy and confidence.',
+  currentWeight: 0, targetWeight: 0, startWeight: 0, weightHistory: [],
+  waterGlasses: 0, waterDate: new Date().toDateString(), cardioMinutesToday: 0,
+  caloriesBurnedToday: 0, completedWorkoutIds: [], completedRecipeIds: [],
+  streakDays: 0, confidenceScore: 0,
+  dailyAffirmation: 'Your journey starts with your own goals.',
 };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<NavTab>('trends');
+  const [activeTab, setActiveTab] = useState<NavTab>(location.pathname.startsWith('/diet-plan') ? 'plans' : 'trends');
   const [fashionSubView, setFashionSubView] = useState<'trends' | 'studio'>('trends');
   const [exerciseSubView, setExerciseSubView] = useState<'trends' | 'workout'>('trends');
   const [foodSubView, setFoodSubView] = useState<'trends' | 'recipes'>('trends');
@@ -57,59 +45,21 @@ export default function App() {
   const [selectedPlanForCheckout, setSelectedPlanForCheckout] = useState<PlanDetails | null>(null);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
 
-  // Subscription state from storage
-  const [subscription, setSubscription] = useState<SubscriptionState | null>(() => {
-    const saved = getStoredSubscription();
-    if (saved) return saved;
-    // Default active Plus subscription so all pages are unlocked and verifiable out of the box
-    return {
-      isActive: true,
-      tier: 'plus',
-      subscribedAt: new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      }),
-      customerName: 'Sarah Jenkins',
-      customerEmail: 'sarah.jenkins@example.com',
-      paymentMethod: 'Visa •••• 4242 (Stripe Verified)',
-      invoiceId: 'INV-STR-8942-PL',
-      autoRenew: true,
-    };
-  });
-
-  // User progress data from storage
-  const [progress, setProgress] = useState<UserProgressData>(() => {
-    try {
-      const saved = localStorage.getItem('lifestylehub_progress_v1');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.warn('Failed to parse progress from storage:', e);
-    }
-    return DEFAULT_PROGRESS;
-  });
-
-  // Legal Consent record
-  const [consentRecord, setConsentRecord] = useState<LegalConsentRecord | null>(() => {
-    try {
-      const saved = localStorage.getItem('lifestylehub_legal_consent');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.warn('Failed to read consent:', e);
-    }
-    return {
-      hasConsented: true,
-      termsAcceptedDate: 'Nov 2, 2026',
-      signatureName: 'Sarah Jenkins',
-      parqClearanceConfirmed: true,
-      ipMock: 'SEC-8942',
-    };
-  });
+  // Membership is verified by the server; browser storage never proves payment.
+  const [subscription, setSubscription] = useState<SubscriptionState | null>(null);
+  const [progress, setProgress] = useState<UserProgressData>(DEFAULT_PROGRESS);
+  const [consentRecord] = useState<LegalConsentRecord | null>(null);
+  useEffect(() => {
+    getVerifiedSubscription().then(setSubscription).catch(() => setSubscription(null));
+    // Retire the former demo storage namespace without reading it as customer data.
+    ['lifestylehub_subscription_state_v1', 'lifestylehub_legal_consent',
+     'lifestylehub_stripe_settings_v1', 'lifestylehub_progress_v1'].forEach(key => localStorage.removeItem(key));
+  }, []);
 
   // Save progress changes
   useEffect(() => {
     try {
-      localStorage.setItem('lifestylehub_progress_v1', JSON.stringify(progress));
+      // Progress stays in memory until authenticated account storage is connected.
     } catch (e) {
       console.error('Failed to save progress:', e);
     }
@@ -122,7 +72,7 @@ export default function App() {
 
   const handleCheckoutSuccess = (newSub: SubscriptionState) => {
     setSubscription(newSub);
-    saveStoredSubscription(newSub);
+
     setActiveTab('dashboard');
   };
 
@@ -131,6 +81,7 @@ export default function App() {
     setProgress((prev) => ({
       ...prev,
       currentWeight: newWeight,
+      startWeight: prev.startWeight || newWeight,
       weightHistory: [...prev.weightHistory, { date: todayLabel, weight: newWeight }],
     }));
   };
@@ -201,6 +152,7 @@ export default function App() {
 
       {/* Main App Content Viewport */}
       <main className="flex-1 pb-24 lg:pb-12">
+        <DailyLiving subscription={subscription} onOpenPlans={() => setActiveTab('plans')} />
         {/* TAB 0: TRENDS 2026 HOME */}
         {activeTab === 'trends' && (
           <TrendsHomeSection

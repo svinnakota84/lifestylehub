@@ -36,7 +36,7 @@ export const PersonalizedDashboard: React.FC<PersonalizedDashboardProps> = ({
   onOpenLegalShield,
 }) => {
   const [showWeightModal, setShowWeightModal] = useState(false);
-  const [tempWeight, setTempWeight] = useState(progress.currentWeight.toString());
+  const [tempWeight, setTempWeight] = useState(progress.currentWeight ? progress.currentWeight.toString() : '');
 
   // Calculations
   const totalWeightLossTarget = progress.startWeight - progress.targetWeight;
@@ -65,7 +65,7 @@ export const PersonalizedDashboard: React.FC<PersonalizedDashboardProps> = ({
               Personalized Health Hub
             </span>
             <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Offline Synced
+              <CheckCircle2 className="w-3 h-3" /> This visit only
             </span>
           </div>
           <h1 className="text-3xl sm:text-5xl font-serif-luxury font-normal text-[#1A1918] mt-1 tracking-tight">
@@ -111,14 +111,14 @@ export const PersonalizedDashboard: React.FC<PersonalizedDashboardProps> = ({
             </div>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="text-3xl font-serif-luxury font-bold text-stone-900">
-                {progress.currentWeight}
+                {progress.currentWeight || '—'}
               </span>
               <span className="text-xs text-stone-500">lbs</span>
               <span className="text-xs text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full ml-auto">
                 {currentLost > 0 ? `-${currentLost.toFixed(1)} lbs` : 'On Track'}
               </span>
             </div>
-            <p className="text-[11px] text-stone-500 mt-1">Goal: {progress.targetWeight} lbs ({progressPct}% achieved)</p>
+            <p className="text-[11px] text-stone-500 mt-1">Goal: {progress.targetWeight || 'Not set'} lbs ({progressPct}% achieved)</p>
 
             <div className="w-full bg-stone-100 h-2 rounded-full mt-3 overflow-hidden">
               <div

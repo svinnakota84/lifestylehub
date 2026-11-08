@@ -298,7 +298,7 @@ export const TrendsHomeSection: React.FC<TrendsHomeSectionProps> = ({
               Choose Your Plan (From $9.99/mo)
             </button>
             <span className="text-xs text-stone-400">
-              Billed monthly through Stripe's secure checkout. Cancel anytime.
+              USD monthly pricing. Secure checkout activation pending.
             </span>
           </div>
         </div>

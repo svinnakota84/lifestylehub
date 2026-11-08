@@ -1,73 +1,34 @@
-export interface StripeConfig {
-  publishableKey: string;
-  isConfigured: boolean;
-  businessName: string;
-  currency: string;
-  stripeAccountId?: string;
-  useSandboxSimulation: boolean;
+import type { SubscriptionState, PlanTier } from '../types';
+
+async function api(path: string, body?: unknown) {
+  const response = await fetch(`/api/${path}`, {
+    method: body === undefined ? 'GET' : 'POST', credentials: 'same-origin',
+    cache: 'no-store', headers: { 'Content-Type': 'application/json' },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+  if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+    throw new Error('Secure subscriptions are not connected yet. No payment has been taken.');
+  }
+  return response.json();
 }
 
-const STRIPE_STORAGE_KEY = 'lifestylehub_stripe_settings_v1';
-const SUBSCRIPTION_STORAGE_KEY = 'lifestylehub_subscription_state_v1';
-
-export function getStripeConfig(): StripeConfig {
-  const envKey = (import.meta as unknown as { env?: { VITE_STRIPE_PUBLISHABLE_KEY?: string } }).env?.VITE_STRIPE_PUBLISHABLE_KEY || '';
-  try {
-    const saved = localStorage.getItem(STRIPE_STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return {
-        ...parsed,
-        publishableKey: parsed.publishableKey || envKey,
-        isConfigured: true,
-      };
-    }
-  } catch (err) {
-    console.warn('Could not read Stripe config from localStorage:', err);
-  }
-
-  return {
-    publishableKey: envKey || 'pk_test_51LifestyleHubDemoStripeKeyLiveVerified',
-    isConfigured: true, // Configured and ready to process transactions
-    businessName: 'LifestyleHub Inc.',
-    currency: 'USD',
-    stripeAccountId: 'acct_lifestylehub_business',
-    useSandboxSimulation: true,
-  };
+export async function getVerifiedSubscription(): Promise<SubscriptionState | null> {
+  const data = await api('membership');
+  // The backend must authenticate the customer and query Stripe, not trust this UI.
+  return data.subscription?.isActive === true ? data.subscription : null;
 }
 
-export function saveStripeConfig(config: StripeConfig): void {
-  try {
-    localStorage.setItem(STRIPE_STORAGE_KEY, JSON.stringify(config));
-  } catch (err) {
-    console.error('Failed to save Stripe config:', err);
+export async function beginCheckout(input: {plan: PlanTier; name: string; email: string; termsAccepted: boolean}) {
+  const data = await api('checkout', input);
+  const url = new URL(data.url);
+  if (url.protocol !== 'https:' || url.hostname !== 'checkout.stripe.com') {
+    throw new Error('A valid Stripe checkout was not returned. No payment has been taken.');
   }
+  window.location.assign(url.href);
 }
 
-export function getStoredSubscription() {
-  try {
-    const saved = localStorage.getItem(SUBSCRIPTION_STORAGE_KEY);
-    if (saved) {
-      return JSON.parse(saved);
-    }
-  } catch (err) {
-    console.warn('Failed to parse subscription from storage:', err);
-  }
-  return null;
-}
-
-export function saveStoredSubscription(sub: unknown): void {
-  try {
-    localStorage.setItem(SUBSCRIPTION_STORAGE_KEY, JSON.stringify(sub));
-  } catch (err) {
-    console.error('Failed to save subscription:', err);
-  }
-}
-
-export function clearStoredSubscription(): void {
-  try {
-    localStorage.removeItem(SUBSCRIPTION_STORAGE_KEY);
-  } catch (err) {
-    console.error('Failed to clear subscription:', err);
-  }
+export async function askCoach(question: string): Promise<string> {
+  const data = await api('coach', {question});
+  if (typeof data.answer !== 'string') throw new Error('The coach is unavailable. Please try later.');
+  return data.answer;
 }
