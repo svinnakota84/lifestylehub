@@ -1,1 +1,0 @@
-export function paymentLink(json,plan){try{const links=JSON.parse(json||'{}');const u=new URL(links[plan]);return u.protocol==='https:'&&u.hostname==='buy.stripe.com'&&!u.username&&!u.password&&!u.port&&!u.pathname.startsWith('/test_')&&u.pathname.length>1?u.href:null;}catch{return null;}}

@@ -1,13 +1,9 @@
-# Lifestyle Hub by Radiant Spark
+# Lifestyle Hub
 
-Editorial food, movement and style website with a working recipe search, recipe dialogs and browser-local saved collection. Node 24: `npm ci`, `npm test`, `npm run lint`, `npm run build`.
+The previous Lifestyle Hub appearance and features are restored. Only the payment flow and its required backend/build support are changed.
 
-The original uploaded Lifestyle ZIP was only an HTML shell. This source comes from the existing Lifestyle Hub GitHub repository, retaining its recipe collection while removing simulated payments, health profiles, legal immunity claims, fabricated trend rankings and obsolete compiled assets.
+Node 24: `npm ci`, `npm test`, `npm run lint`, `npm run build`. GitHub Actions deploys the frontend to Pages. Netlify deployment support packages the same frontend with server-side payment handlers.
 
-Saved recipe IDs stay in localStorage on this browser. No account, health data, progress tracker, personalized diet, AI coaching, daily WhatsApp delivery or cross-device sync is claimed. Images are illustrative recipe photography from the original source.
+The existing plan dialog opens Stripe-hosted checkout only when the backend is configured. It never collects card details on this website or simulates a successful subscription. Membership requires a server-signed browser session, verified Stripe payment, signed webhook processing and an active paid subscription. Prices are validated server-side in USD. See [payment setup and verification](docs/PAYMENTS.md).
 
-Subscription availability defaults to unavailable. `VITE_STRIPE_LINKS` may contain actual live Stripe Payment Links keyed by `essentials`, `plus`, `coach`; the actual service description, USD price, billing and cancellation terms must be reviewed on Stripe. A link does not activate a local member account. Authenticated membership and verified Stripe webhooks are required for paid fulfillment. Never add secret keys to VITE variables.
-
-`VITE_CORPORATE_URL` links to the main site. The ten-agent owner workspace is there; `netlify/functions/agents.mjs` is also included in this project so a Netlify deployment may serve its backend. GitHub Pages is static and cannot execute it. See `docs/COMPOSIO-SETUP.md`. No server credentials or connected accounts were available for a live integration test.
-
-The build publishes only `dist` and supplies a 404/SPA fallback. `public/CNAME` preserves the Lifestyle custom domain from the existing project. Domain settings and DNS are separate from this file. No new service was purchased.
+Live payments are disabled by default. Stripe Tax head-office settings, confirmed tax classification/registrations, real recurring prices, server secrets, webhook delivery and paid service fulfillment still need verification before enabling charges. No purchase or customer charge was made during this work.

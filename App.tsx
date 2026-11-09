@@ -1,34 +1,440 @@
-import React,{useEffect,useState} from 'react';
-import {ArrowUpRight,ArrowRight,Bookmark,Search,X,Menu,Sparkles,Check,Leaf} from 'lucide-react';
-import {HEALTHY_RECIPES} from './data/recipesData';
-import type {Recipe} from './types';
-import {paymentLink} from './shared/payment-links.mjs';
+import React, { useState, useEffect } from 'react';
+import {
+  Sparkles,
+  Lock,
+  ArrowRight,
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
+  Zap,
+  Sliders,
+  BookOpen,
+} from 'lucide-react';
+import { Navigation, NavTab } from './components/Navigation';
+import { TrendsHomeSection } from './components/TrendsHomeSection';
+import { EditorialIssueView } from './components/EditorialIssueView';
+import { PricingPlans } from './components/PricingPlans';
+import { DietPlansPage } from './components/DietPlansPage';
+import { CardioWorkoutsPage } from './components/CardioWorkoutsPage';
+import { FashionConfidencePage } from './components/FashionConfidencePage';
+import { PersonalizedDashboard } from './components/PersonalizedDashboard';
+import { StripeCheckoutModal } from './components/StripeCheckoutModal';
+import { LegalShieldModal } from './components/LegalShieldModal';
+import { OfflineIndicator } from './components/OfflineIndicator';
 
-type Page='discover'|'food'|'movement'|'style'|'saved'|'memberships';
-const pages:Record<string,string>={discover:'Discover',food:'Food',movement:'Movement',style:'Style',saved:'Your collection',memberships:'Memberships'};
-const corporate=import.meta.env.VITE_CORPORATE_URL||'https://svinnakota84.github.io/radiantspark/';
-const allRecipes=HEALTHY_RECIPES.slice(0,9);
-const readSaved=()=>{try{const value=JSON.parse(localStorage.getItem('lifestyle-saved-recipes-v2')||'[]');return Array.isArray(value)?value.filter(id=>typeof id==='string'&&allRecipes.some(r=>r.id===id)):[];}catch{return [];}};
-const configuredLink=(plan:string)=>paymentLink(import.meta.env.VITE_STRIPE_LINKS,plan);
-export default function App(){
- const initial=location.pathname.includes('diet-plan')?'memberships':location.hash.slice(1);
- const[page,setPage]=useState<Page>(Object.hasOwn(pages,initial)?initial as Page:'discover');
- const[saved,setSaved]=useState<string[]>(readSaved),[query,setQuery]=useState(''),[selected,setSelected]=useState<Recipe|null>(null),[menu,setMenu]=useState(false),[notice,setNotice]=useState(''),[terms,setTerms]=useState(false);
- useEffect(()=>{const change=()=>{const p=location.hash.slice(1);if(Object.hasOwn(pages,p))setPage(p as Page);};addEventListener('hashchange',change);return()=>removeEventListener('hashchange',change);},[]);
- useEffect(()=>{if(!selected&&!terms)return;const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){setSelected(null);setTerms(false);}};addEventListener('keydown',key);return()=>removeEventListener('keydown',key);},[selected,terms]);
- const go=(p:Page)=>{setPage(p);location.hash=p;setMenu(false);setQuery('');window.scrollTo({top:0,behavior:'smooth'});};
- const toggle=(id:string)=>{const next=saved.includes(id)?saved.filter(x=>x!==id):[...saved,id];setSaved(next);try{localStorage.setItem('lifestyle-saved-recipes-v2',JSON.stringify(next));setNotice('');}catch{setNotice('Browser storage is unavailable. Your collection will only last in this tab.');}};
- const recipeGrid=(items:Recipe[])=><div className="recipe-grid">{items.map((r,i)=><article className="recipe-card" key={r.id}><button className="recipe-image" onClick={()=>setSelected(r)} aria-label={`Open ${r.title}`}><img src={r.image} alt={r.title} loading="lazy"/></button><button className={`save-button ${saved.includes(r.id)?'saved':''}`} aria-label={`${saved.includes(r.id)?'Unsave':'Save'} ${r.title}`} aria-pressed={saved.includes(r.id)} onClick={()=>toggle(r.id)}><Bookmark size={18} fill={saved.includes(r.id)?'currentColor':'none'}/></button><p className="micro">RECIPE NOTE / {String(i+1).padStart(2,'0')}</p><button className="recipe-title" onClick={()=>setSelected(r)}>{r.title.replace(/^\d+-Min /,'')}</button><p className="recipe-meta">{r.prepTime} prep · {r.cookTime} cooking</p></article>)}</div>;
- const matches=allRecipes.filter(r=>`${r.title} ${r.ingredients.join(' ')}`.toLowerCase().includes(query.toLowerCase()));
- return <div className="lifestyle-site"><a className="skip-link" href="#content">Skip to content</a><header className="lifestyle-header"><a href="#discover" className="lifestyle-logo" onClick={()=>go('discover')}><span>✳</span> lifestyle<span className="logo-hub">hub</span><small>BY RADIANT SPARK</small></a><nav className={menu?'open':''} aria-label="Main navigation">{Object.entries(pages).filter(([p])=>p!=='memberships').map(([id,label])=><a href={`#${id}`} key={id} onClick={()=>go(id as Page)} aria-current={page===id?'page':undefined}>{label}{id==='saved'&&saved.length>0&&<span className="saved-count">{saved.length}</span>}</a>)}</nav><button className="membership-link" onClick={()=>go('memberships')}>Memberships <ArrowUpRight size={15}/></button><button className="menu-button" aria-label={menu?'Close menu':'Open menu'} aria-expanded={menu} onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button></header>
- <main id="content">
- {page==='discover'&&<><section className="living-hero living-wrap"><div className="living-hero-copy"><p className="micro">LESS PRESSURE. MORE POSSIBILITY.</p><h1>A little inspiration.<br/>A <em>fuller everyday.</em></h1><p>Good food, joyful movement and personal style. Small ideas to make your daily life feel a little more like you.</p><button className="living-button" onClick={()=>go('food')}>Find something to cook <ArrowUpRight size={18}/></button><div className="hero-chapters"><span>01 / EAT</span><span>02 / MOVE</span><span>03 / EXPRESS</span></div></div><div className="living-hero-photo"><img src={allRecipes[0].image} alt="Lemon herb salmon with vegetables, recipe inspiration"/><div className="photo-caption"><span>THE EVERYDAY TABLE</span><button onClick={()=>setSelected(allRecipes[0])}>Something simple.<br/>Something satisfying. <ArrowUpRight size={20}/></button></div><span className="roundel">make room<br/>for good things<br/>✳</span></div></section><div className="living-ribbon"><span>A recipe to try.</span><span>✳</span><span>A moment to move.</span><span>✳</span><span>A style that feels like you.</span></div><section className="living-wrap chapter-section"><div className="living-section-head"><div><p className="micro">YOUR NEXT SMALL DISCOVERY</p><h2>Follow your <em>curiosity.</em></h2></div><p>Three ways to bring a fresh perspective to the everyday.</p></div><div className="chapter-grid">{[['food','01','At your table','Recipes worth making room for.','Eat with curiosity'],['movement','02','At your own pace','Simple movement ideas for your day.','Find your rhythm'],['style','03','In your element','Colors and combinations to make your own.','Explore your style']].map(([p,n,t,d,cta])=><button className={`chapter-card ${p}`} key={p} onClick={()=>go(p as Page)}><span className="micro">CHAPTER {n}</span><span className="chapter-symbol">{p==='food'?'◒':p==='movement'?'↗':'✳'}</span><h3>{t}</h3><p>{d}</p><span className="chapter-cta">{cta}<ArrowUpRight size={18}/></span></button>)}</div></section><section className="living-wrap recipe-section"><div className="living-section-head"><div><p className="micro">FROM THE RECIPE COLLECTION</p><h2>Good things<br/><em>start in the kitchen.</em></h2></div><button className="text-link" onClick={()=>go('food')}>All recipes <ArrowRight size={18}/></button></div>{recipeGrid(allRecipes.slice(0,3))}</section><section className="slow-banner"><div className="living-wrap"><span>✳</span><p>You don’t need a whole new life.<br/><em>Just a little room for what feels good.</em></p><button className="living-button outline" onClick={()=>go('saved')}>Build your collection <Bookmark size={17}/></button></div></section></>}
- {(page==='food'||page==='saved')&&<section className="living-wrap content-page"><p className="micro">{page==='saved'?'SAVED IN THIS BROWSER':'THE EVERYDAY TABLE'}</p><h1>{page==='saved'?<>Your own<br/><em>little collection.</em></>:<>What sounds<br/><em>good today?</em></>}</h1><p className="page-intro">{page==='saved'?'Keep the recipes you want to come back to. This collection is private to this browser, with no account or cross-device sync.':'Browse recipes and search by ingredient. Recipe notes are editorial inspiration, not a prescribed diet or medical advice.'}</p>{notice&&<p role="status">{notice}</p>}{page==='food'&&<label className="recipe-search"><Search size={18}/><span className="sr-only">Search recipes or ingredients</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Try an ingredient, or a dish you love…"/></label>}{recipeGrid(page==='saved'?allRecipes.filter(r=>saved.includes(r.id)):matches)}{(page==='saved'?saved.length===0:matches.length===0)&&<div className="empty-state"><Leaf size={32}/><h2>{page==='saved'?'A fresh page, just for you.':'No recipes found.'}</h2><p>{page==='saved'?'Tap the bookmark on a recipe to save it here.':'Try another ingredient or clear your search.'}</p><button className="living-button" onClick={()=>{go('food');setQuery('');}}>Browse recipes <ArrowRight size={17}/></button></div>}</section>}
- {page==='movement'&&<section className="living-wrap content-page"><p className="micro">AT YOUR OWN PACE</p><h1>Make a little<br/><em>room to move.</em></h1><p className="page-intro">Everyday movement inspiration. Choose what is comfortable for you; this is not a personalized exercise program.</p><div className="movement-grid">{[['01','Take the scenic route','A familiar walk can feel different with a new route, a favorite playlist or a little time outdoors.'],['02','Create a movement moment','Give yourself a pause between tasks. A comfortable stretch or a change of position can be a simple starting point.'],['03','Make it something you enjoy','Music, company or a setting you love can make movement feel like a part of your day, rather than another task.']].map(([n,t,d])=><article key={n}><span>{n}</span><h2>{t}</h2><p>{d}</p></article>)}</div><p className="content-note">Adapt movement to your abilities. If you have a health condition, injury or symptoms, get individual guidance from a qualified clinician. No calorie-burn or weight-loss results are promised.</p></section>}
- {page==='style'&&<section className="living-wrap content-page"><p className="micro">IN YOUR ELEMENT</p><h1>A style that<br/><em>feels like you.</em></h1><p className="page-intro">A small color study. Choose a palette, notice what you like and make it your own. No body analysis, rules or trend rankings.</p><div className="palette-grid">{[['Earth & ease',['#b5815e','#e4d7bd','#53674b','#413b31'],'Warm neutrals, textured fabrics and a grounding green.'],['Quiet contrast',['#202e3d','#f1e9d8','#97a6a1','#d0a28d'],'A deep base, a light layer and one softer detail.'],['A little brightness',['#a9433c','#e4bd56','#d9cfbf','#405b68'],'A small pop of color against pieces you already love.']].map(([name,colors,description])=><article key={name as string}><div className="palette-colors">{(colors as string[]).map(c=><span key={c} style={{background:c}} aria-label={c}/>)}</div><h2>{name as string}</h2><p>{description as string}</p></article>)}</div></section>}
- {page==='memberships'&&<section className="living-wrap content-page"><p className="micro">SERVICE AVAILABILITY</p><h1>Know what’s here.<br/><em>Before you join.</em></h1><p className="page-intro">The recipe collection, saved recipes and editorial pages are available to browse. Personalized plans, AI coaching, member accounts and daily WhatsApp delivery are not active on this website.</p><div className="membership-grid">{[['essentials','Essentials'],['plus','Plus'],['coach','Coach']].map(([id,name])=>{const link=configuredLink(id);return <article key={id}><p className="micro">LIFESTYLE HUB</p><h2>{name}</h2><span className="availability">{link?'Checkout link configured':'Not open for enrollment'}</span><p>{link?'Read the actual service description, USD price, billing frequency and cancellation terms on Stripe before paying. Payment does not activate an account on this static website.':'No payment can be taken for this plan here. We will show its actual features and terms when the service is available.'}</p>{link?<a className="living-button" href={link} target="_blank" rel="noopener noreferrer">Review on Stripe <ArrowUpRight size={17}/></a>:<button className="living-button" disabled>Enrollment unavailable</button>}</article>;})}</div><p className="content-note">Card details are entered only on Stripe-hosted pages. Acceptance, currency conversion and any fees depend on the payment provider and your card issuer. No payment is verified from browser storage.</p></section>}
- </main><footer className="living-footer living-wrap"><div><a className="lifestyle-logo" href="#discover" onClick={()=>go('discover')}><span>✳</span> lifestyle<span className="logo-hub">hub</span></a><p>A little more everyday inspiration.</p><small>© {new Date().getFullYear()} Radiant Spark LLC</small></div><div><a href={corporate}>Radiant Spark Global <ArrowUpRight size={14}/></a><a href={`${corporate}#agents`}>Owner agent workspace <ArrowUpRight size={14}/></a><button onClick={()=>setTerms(true)}>Privacy & service information</button><small>Editorial content · Not a medical service</small></div></footer>
- {selected&&<div className="modal-shade" onClick={()=>setSelected(null)}><section className="recipe-modal" role="dialog" aria-modal="true" aria-label={selected.title} onClick={e=>e.stopPropagation()}><button autoFocus className="modal-close" aria-label="Close recipe" onClick={()=>setSelected(null)}><X/></button><img src={selected.image} alt={selected.title}/><div><p className="micro">FROM THE RECIPE COLLECTION</p><h2>{selected.title}</h2><p className="content-note">Cooking times are approximate. Check ingredients for allergens and verify safe cooking temperatures with a food thermometer.</p><a className="text-link" href="https://www.foodsafety.gov/food-safety-charts/safe-minimum-internal-temperatures" target="_blank" rel="noopener noreferrer">FoodSafety.gov cooking guidance <ArrowUpRight size={14}/></a><br/><button className="text-link" onClick={()=>toggle(selected.id)}><Bookmark size={17}/>{saved.includes(selected.id)?'Saved to your collection':'Save this recipe'}</button><div className="recipe-method"><div><h3>Ingredients</h3><ul>{selected.ingredients.map((i,n)=><li key={n}>{i}</li>)}</ul></div><div><h3>At the stove</h3><ol>{selected.instructions.map((i,n)=><li key={n}>{i}</li>)}</ol></div></div></div></section></div>}
- {terms&&<div className="modal-shade" onClick={()=>setTerms(false)}><section className="information-modal" role="dialog" aria-modal="true" aria-label="Privacy and service information" onClick={e=>e.stopPropagation()}><button autoFocus className="modal-close" aria-label="Close information" onClick={()=>setTerms(false)}><X/></button><p className="micro">A CLEARER EVERYDAY</p><h2>Privacy & service information</h2><p>Recipes, movement ideas and style notes are general editorial content. They are not medical advice, individual treatment or a guarantee of any result.</p><p>Your saved recipe IDs are stored in this browser’s localStorage. Use each bookmark button to remove an item, or clear this site’s browser data. There is no account, health profile or cross-device sync.</p><p>Images and fonts may be loaded from external providers. Hosting and those providers may process connection information under their own policies. External links open separate services with their own terms.</p><p>Paid services are unavailable unless an actual checkout link is configured. No card details are collected here. Consumer rights remain in force; this page does not promise immunity or impose a blanket waiver.</p></section></div>}
- </div>;
+import { PlanDetails, SubscriptionState, UserProgressData, LegalConsentRecord } from './types';
+import { PRICING_PLANS } from './data/pricingPlans';
+import { LIFESTYLE_ISSUES } from './data/lifestyleTrendsData';
+import { getVerifiedSubscription, openBillingPortal } from './services/stripeService';
+import { DailyLiving } from './components/DailyLiving';
+
+const DEFAULT_PROGRESS: UserProgressData = {
+  currentWeight: 0, targetWeight: 0, startWeight: 0, weightHistory: [],
+  waterGlasses: 0, waterDate: new Date().toDateString(), cardioMinutesToday: 0,
+  caloriesBurnedToday: 0, completedWorkoutIds: [], completedRecipeIds: [],
+  streakDays: 0, confidenceScore: 0,
+  dailyAffirmation: 'Your journey starts with your own goals.',
+};
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState<NavTab>(location.pathname.startsWith('/diet-plan') ? 'plans' : 'trends');
+  const [fashionSubView, setFashionSubView] = useState<'trends' | 'studio'>('trends');
+  const [exerciseSubView, setExerciseSubView] = useState<'trends' | 'workout'>('trends');
+  const [foodSubView, setFoodSubView] = useState<'trends' | 'recipes'>('trends');
+
+  const [selectedPlanForCheckout, setSelectedPlanForCheckout] = useState<PlanDetails | null>(null);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+
+  // Membership is verified by the server; browser storage never proves payment.
+  const [subscription, setSubscription] = useState<SubscriptionState | null>(null);
+  const [progress, setProgress] = useState<UserProgressData>(DEFAULT_PROGRESS);
+  const [consentRecord] = useState<LegalConsentRecord | null>(null);
+  useEffect(() => {
+    getVerifiedSubscription().then(setSubscription).catch(() => setSubscription(null));
+    // Retire the former demo storage namespace without reading it as customer data.
+    ['lifestylehub_subscription_state_v1', 'lifestylehub_legal_consent',
+     'lifestylehub_stripe_settings_v1', 'lifestylehub_progress_v1'].forEach(key => localStorage.removeItem(key));
+  }, []);
+
+  const [paymentNotice, setPaymentNotice] = useState('');
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('checkout') !== 'success') return;
+    let stopped=false, attempts=0;
+    setPaymentNotice('Checking payment confirmation with the server. Access is not active until payment is verified.');
+    const verify=async()=>{try{const confirmed=await getVerifiedSubscription();if(!stopped&&confirmed){setSubscription(confirmed);setActiveTab('dashboard');setPaymentNotice('Payment verified. Your membership is active.');clearInterval(timer);}else if(!stopped&&++attempts>=20){clearInterval(timer);setPaymentNotice('Payment confirmation is still pending. Refresh this page later; no membership has been activated here.');}}catch{if(!stopped){clearInterval(timer);setPaymentNotice('Payment verification is unavailable. No membership has been activated here.');}}};
+    const timer=window.setInterval(verify,1500);verify();
+    return()=>{stopped=true;clearInterval(timer);};
+  }, []);
+
+  // Save progress changes
+  useEffect(() => {
+    try {
+      // Progress stays in memory until authenticated account storage is connected.
+    } catch (e) {
+      console.error('Failed to save progress:', e);
+    }
+  }, [progress]);
+
+  // Handlers
+  const handleSelectPlan = (plan: PlanDetails) => {
+    setSelectedPlanForCheckout(plan);
+  };
+
+  const handleCheckoutSuccess = async (_newSub: SubscriptionState) => {
+    const verified = await getVerifiedSubscription().catch(() => null);
+    if (verified) { setSubscription(verified); setActiveTab('dashboard'); }
+  };
+
+  const handleUpdateWeight = (newWeight: number) => {
+    const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    setProgress((prev) => ({
+      ...prev,
+      currentWeight: newWeight,
+      startWeight: prev.startWeight || newWeight,
+      weightHistory: [...prev.weightHistory, { date: todayLabel, weight: newWeight }],
+    }));
+  };
+
+  const handleToggleWater = (glassIndex: number) => {
+    setProgress((prev) => {
+      const current = prev.waterGlasses;
+      const next = glassIndex < current ? glassIndex : glassIndex + 1;
+      return { ...prev, waterGlasses: next };
+    });
+  };
+
+  const handleUpdateConfidence = (score: number) => {
+    setProgress((prev) => ({ ...prev, confidenceScore: score }));
+  };
+
+  const handleLogWorkout = (routineId: string, minutes: number, calories: number) => {
+    setProgress((prev) => ({
+      ...prev,
+      cardioMinutesToday: prev.cardioMinutesToday + minutes,
+      caloriesBurnedToday: prev.caloriesBurnedToday + calories,
+      completedWorkoutIds: prev.completedWorkoutIds.includes(routineId)
+        ? prev.completedWorkoutIds
+        : [...prev.completedWorkoutIds, routineId],
+    }));
+    setActiveTab('dashboard');
+  };
+
+  const handleLogMeal = (recipeId: string) => {
+    setProgress((prev) => ({
+      ...prev,
+      completedRecipeIds: prev.completedRecipeIds.includes(recipeId)
+        ? prev.completedRecipeIds
+        : [...prev.completedRecipeIds, recipeId],
+      streakDays: prev.streakDays + 1,
+    }));
+    setActiveTab('dashboard');
+  };
+
+  const handleDownloadZip = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/lifestylehub-final.zip');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/zip' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'lifestylehub-final.zip';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch {
+      window.location.href = '/lifestylehub-final.zip';
+    }
+  };
+
+  const isUnlocked = subscription?.isActive === true;
+
+  return (
+    <div className="min-h-screen bg-[#FAF7F2] text-[#1F1C18] flex flex-col justify-between selection:bg-[#EED989] selection:text-[#1F1C18]">
+      {/* Top Navigation */}
+      <Navigation
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        subscription={subscription}
+      />
+
+      {paymentNotice && <p role="status" className="max-w-7xl mx-auto px-6 py-3 text-sm text-stone-600">{paymentNotice}</p>}
+      {subscription?.isActive && <div className="max-w-7xl mx-auto px-6 py-2"><button className="text-xs underline" onClick={()=>openBillingPortal().catch(e=>setPaymentNotice(e.message))}>Manage subscription securely on Stripe</button></div>}
+      {/* Main App Content Viewport */}
+      <main className="flex-1 pb-24 lg:pb-12">
+        <DailyLiving subscription={subscription} onOpenPlans={() => setActiveTab('plans')} />
+        {/* TAB 0: TRENDS 2026 HOME */}
+        {activeTab === 'trends' && (
+          <TrendsHomeSection
+            onNavigate={setActiveTab}
+            onOpenPlans={() => setActiveTab('plans')}
+          />
+        )}
+
+        {/* TAB 1: FASHION (ISSUE 01) */}
+        {activeTab === 'fashion' && (
+          <div>
+            {/* View Sub-Toggle */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 flex items-center justify-between">
+              <div className="inline-flex p-1 bg-[#F3EFEA] rounded-full border border-[#E8E2D8]">
+                <button
+                  onClick={() => setFashionSubView('trends')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    fashionSubView === 'trends'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Fashion Trends & Looks</span>
+                </button>
+                <button
+                  onClick={() => setFashionSubView('studio')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    fashionSubView === 'studio'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <Sliders className="w-3.5 h-3.5 text-[#EED989]" />
+                  <span>Body Silhouettes & Colors</span>
+                </button>
+              </div>
+            </div>
+
+            {fashionSubView === 'trends' ? (
+              <EditorialIssueView
+                issue={LIFESTYLE_ISSUES.fashion}
+                onOpenActionSuite={() => setFashionSubView('studio')}
+                actionSuiteTitle="Body Shapes & Color Combinations"
+                actionSuiteSubtitle="Match tailored cuts and 4 seasonal color palettes to your exact body silhouette to boost everyday confidence."
+              />
+            ) : (
+              <FashionConfidencePage />
+            )}
+          </div>
+        )}
+
+        {/* TAB 2: FOOD (ISSUE 02) */}
+        {activeTab === 'diets' && (
+          <div>
+            {/* View Sub-Toggle */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 flex items-center justify-between">
+              <div className="inline-flex p-1 bg-[#F3EFEA] rounded-full border border-[#E8E2D8]">
+                <button
+                  onClick={() => setFoodSubView('trends')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    foodSubView === 'trends'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Food Trends 2026</span>
+                </button>
+                <button
+                  onClick={() => setFoodSubView('recipes')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    foodSubView === 'recipes'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-[#EED989]" />
+                  <span>Healthy Cooking Recipes & Timer</span>
+                </button>
+              </div>
+            </div>
+
+            {foodSubView === 'trends' ? (
+              <EditorialIssueView
+                issue={LIFESTYLE_ISSUES.food}
+                onOpenActionSuite={() => setFoodSubView('recipes')}
+                actionSuiteTitle="Simple & Healthy Cooking Kitchen"
+                actionSuiteSubtitle="Step-by-step recipes, precision cooking timers, prebiotic fiber-maxxing tracks, and interactive grocery checklists."
+              />
+            ) : (
+              <DietPlansPage
+                onLogMeal={handleLogMeal}
+                completedRecipeIds={progress.completedRecipeIds}
+              />
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: FITNESS & EXERCISE (ISSUE 03) */}
+        {activeTab === 'cardio' && (
+          <div>
+            {/* View Sub-Toggle */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 flex items-center justify-between">
+              <div className="inline-flex p-1 bg-[#F3EFEA] rounded-full border border-[#E8E2D8]">
+                <button
+                  onClick={() => setExerciseSubView('trends')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    exerciseSubView === 'trends'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Fitness Trends 2026</span>
+                </button>
+                <button
+                  onClick={() => setExerciseSubView('workout')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                    exerciseSubView === 'workout'
+                      ? 'bg-[#1F1C18] text-[#FAF7F2] shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <Zap className="w-3.5 h-3.5 text-[#EED989]" />
+                  <span>Simple Cardio Fat-Burn Timers</span>
+                </button>
+              </div>
+            </div>
+
+            {exerciseSubView === 'trends' ? (
+              <EditorialIssueView
+                issue={LIFESTYLE_ISSUES.exercise}
+                onOpenActionSuite={() => setExerciseSubView('workout')}
+                actionSuiteTitle="Simple Cardio Weight Loss Protocols"
+                actionSuiteSubtitle="Zone 2 fat oxidation walks, living-room zero-jump circuits, interval countdown timers, and age-based BPM calculators."
+              />
+            ) : (
+              <CardioWorkoutsPage
+                onLogWorkout={handleLogWorkout}
+                completedWorkoutIds={progress.completedWorkoutIds}
+              />
+            )}
+          </div>
+        )}
+
+        {/* TAB 4: PERSONAL DASHBOARD */}
+        {activeTab === 'dashboard' && (
+          <PersonalizedDashboard
+            progress={progress}
+            subscription={subscription}
+            onUpdateWeight={handleUpdateWeight}
+            onToggleWater={handleToggleWater}
+            onUpdateConfidence={handleUpdateConfidence}
+            onOpenPlans={() => setActiveTab('plans')}
+            onOpenLegalShield={() => setIsLegalModalOpen(true)}
+          />
+        )}
+
+        {/* TAB 5: PLANS & PRICING */}
+        {activeTab === 'plans' && (
+          <PricingPlans
+            currentSubscription={subscription}
+            onSelectPlan={handleSelectPlan}
+            onOpenLegalShield={() => setIsLegalModalOpen(true)}
+          />
+        )}
+
+        {/* TAB 6: LEGAL SHIELD */}
+        {activeTab === 'legal' && (
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+            <div className="p-8 rounded-3xl bg-white border border-[#E8E2D8] shadow-sm space-y-6">
+              <div className="flex items-center gap-3 pb-4 border-b border-stone-200">
+                <ShieldCheck className="w-6 h-6 text-emerald-600" />
+                <div>
+                  <h2 className="text-2xl font-display font-light text-stone-900">
+                    Legal Shield & Corporate Protection
+                  </h2>
+                  <p className="text-xs text-stone-500">
+                    Comprehensive enforceable waivers, medical disclaimers, and mandatory AAA arbitration.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-stone-700">
+                <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200">
+                  <h4 className="font-bold text-stone-900 mb-1">1. Non-Medical Education Only</h4>
+                  <p>LifestyleHub content does not constitute medical advice or clinical dietetics. Users must consult a licensed physician prior to caloric deficits or physical exercise.</p>
+                </div>
+                <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200">
+                  <h4 className="font-bold text-stone-900 mb-1">2. Cardiovascular Risk Assumption</h4>
+                  <p>In accordance with PAR-Q standards, users voluntarily assume all inherent risks of physical cardio and release the company from all personal injury claims.</p>
+                </div>
+                <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200">
+                  <h4 className="font-bold text-stone-900 mb-1">3. Mandatory Individual Arbitration</h4>
+                  <p>All claims must be resolved individually through binding AAA arbitration. All class actions and jury trials are waived.</p>
+                </div>
+                <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200">
+                  <h4 className="font-bold text-stone-900 mb-1">4. Maximum Liability Cap</h4>
+                  <p>Total company liability is capped strictly at total fees paid during the prior 3 months or $50.00 USD.</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsLegalModalOpen(true)}
+                className="px-6 py-3 rounded-full bg-[#1F1C18] text-[#FAF7F2] text-xs font-semibold hover:bg-black transition cursor-pointer"
+              >
+                Inspect Full Legal Shield & Signed Certificate
+              </button>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Editorial Footer */}
+      <footer className="border-t border-[#E8E2D8] bg-[#FAF7F2] py-8 px-4 sm:px-6 text-xs text-stone-500">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="font-display font-medium text-stone-900 text-sm">Lifestyle Hub</span>
+            <span>•</span>
+            <span>Fashion, Food & Fitness Trends 2026</span>
+            <span>•</span>
+            <span className="text-emerald-700 font-medium">Offline PWA Synced</span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setActiveTab('trends')}
+              className="hover:text-stone-900 transition"
+            >
+              Trends 2026
+            </button>
+            <button
+              onClick={() => setActiveTab('plans')}
+              className="hover:text-stone-900 transition"
+            >
+              Pricing Plans
+            </button>
+            <button
+              onClick={() => setIsLegalModalOpen(true)}
+              className="hover:text-stone-900 underline underline-offset-2 transition"
+            >
+              Medical Disclaimer & Terms
+            </button>
+            <button
+              onClick={handleDownloadZip}
+              className="hover:text-stone-900 underline underline-offset-2 text-stone-500 font-medium transition cursor-pointer"
+              title="Download verified Windows-compatible project bundle (.ZIP)"
+            >
+              Owner: Download Project .ZIP
+            </button>
+          </div>
+        </div>
+      </footer>
+
+      {/* Global Modals & Indicators */}
+      <StripeCheckoutModal
+        plan={selectedPlanForCheckout}
+        isOpen={!!selectedPlanForCheckout}
+        onClose={() => setSelectedPlanForCheckout(null)}
+        onSuccess={handleCheckoutSuccess}
+        onOpenLegalShield={() => setIsLegalModalOpen(true)}
+      />
+
+      <LegalShieldModal
+        isOpen={isLegalModalOpen}
+        onClose={() => setIsLegalModalOpen(false)}
+        consentRecord={consentRecord}
+      />
+
+      <OfflineIndicator />
+    </div>
+  );
 }
